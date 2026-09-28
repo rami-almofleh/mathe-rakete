@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { GRADES, Grade } from '../../core/models';
-import { BackupBundle, BackupService, backupFilename, readBackup } from '../../core/progress/backup';
 import { MAX_NAME_LENGTH, Profile, PROFILE_COLORS, PROFILE_ICONS, ProfileColor, ProfileStore } from '../../core/progress/profile-store';
 import { ProgressStore } from '../../core/progress/progress-store';
 import { STATE_OPTIONS } from '../../core/curriculum/states';
@@ -14,7 +13,6 @@ import { STATE_OPTIONS } from '../../core/curriculum/states';
 export class ProfilePage {
   protected readonly store = inject(ProfileStore);
   private readonly progress = inject(ProgressStore);
-  private readonly backup = inject(BackupService);
   private readonly router = inject(Router);
 
   protected readonly icons = PROFILE_ICONS;
@@ -34,10 +32,6 @@ export class ProfilePage {
 
   protected readonly cards = computed(() => this.store.profiles().map((p) => ({ ...p, stars: this.progress.starsOf(p.id) })));
   protected readonly canSave = computed(() => this.name().trim().length > 0);
-
-  /** Aus einer gewählten Datei gelesene, aber noch nicht bestätigte Sicherung. */
-  protected readonly importPreview = signal<BackupBundle | null>(null);
-  protected readonly importError = signal<string | null>(null);
 
   protected choose(profile: Profile): void {
     this.store.select(profile.id);
@@ -84,47 +78,6 @@ export class ProfilePage {
   protected setGrade(value: string): void {
     const n = Number(value);
     this.grade.set(GRADES.includes(n as Grade) ? (n as Grade) : null);
-  }
-
-  /** Lädt alle Profile + Fortschritt dieses Geräts als Datei herunter (zum Übertragen auf ein anderes Gerät). */
-  protected downloadBackup(): void {
-    const bundle = this.backup.export();
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = backupFilename();
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  /** Liest die gewählte Datei; zeigt bei Erfolg die Bestätigung, sonst eine Fehlermeldung. */
-  protected onFileSelected(event: Event, input: HTMLInputElement): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    input.value = ''; // dieselbe Datei später erneut wählbar machen
-    if (!file) return;
-    this.importError.set(null);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const bundle = readBackup(String(reader.result));
-      if (bundle) this.importPreview.set(bundle);
-      else this.importError.set('Diese Datei ist keine gültige Mathe-Rakete-Sicherung.');
-    };
-    reader.onerror = () => this.importError.set('Die Datei konnte nicht gelesen werden.');
-    reader.readAsText(file);
-  }
-
-  /** Übernimmt die eingelesene Sicherung – ersetzt alles auf diesem Gerät – und lädt neu. */
-  protected confirmImport(): void {
-    const bundle = this.importPreview();
-    if (!bundle) return;
-    this.backup.restore(bundle);
-    location.reload(); // alle Speicher (Profile, Fortschritt) frisch von der Platte lesen
-  }
-
-  protected cancelImport(): void {
-    this.importPreview.set(null);
-    this.importError.set(null);
   }
 
   private fill(p: Omit<Profile, 'id'>): void {

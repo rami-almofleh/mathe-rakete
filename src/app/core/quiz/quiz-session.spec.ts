@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { plain, QuizSettings, Task } from '../models';
-import { PROGRESS_STORAGE, ProgressStore } from '../progress/progress-store';
+import { ApiClient } from '../auth/api-client';
+import { FakeApiClient } from '../testing/fake-api-client';
+import { ProgressStore } from '../progress/progress-store';
 import { QUIZ_CLOCK } from './quiz-config';
 import { QuizSession } from './quiz-session';
 
@@ -32,7 +34,7 @@ describe('QuizSession', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: QUIZ_CLOCK, useValue: () => clock },
-        { provide: PROGRESS_STORAGE, useValue: null },
+        { provide: ApiClient, useValue: new FakeApiClient() },
       ],
     });
     session = TestBed.inject(QuizSession);

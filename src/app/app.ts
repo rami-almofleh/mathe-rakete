@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { AuthService } from './core/auth/auth.service';
 import { ProfileStore } from './core/progress/profile-store';
 import { ProgressStore } from './core/progress/progress-store';
 
@@ -15,31 +16,39 @@ import { ProgressStore } from './core/progress/progress-store';
           <span class="display-font">Mathe-Rakete</span>
         </a>
         <div class="d-flex align-items-center gap-2">
-          @if (profiles.active(); as p) {
-            <a class="btn btn-sm btn-outline-primary nav-profile color-{{ p.color }}" routerLink="/profil" [attr.aria-label]="'Profil wechseln (' + p.name + ')'">
-              <span class="nav-avatar"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
-              <span class="d-none d-sm-inline text-truncate">{{ p.name }}</span>
-            </a>
-            @if (p.grade) {
-              <a class="btn btn-sm btn-outline-primary nav-grade" routerLink="/klassen" aria-label="Andere Klasse ansehen">
-                <span>Kl. {{ p.grade }}</span>
-                <i class="bi bi-chevron-down" aria-hidden="true"></i>
+          @if (auth.isAuthed()) {
+            @if (profiles.active(); as p) {
+              <a class="btn btn-sm btn-outline-primary nav-profile color-{{ p.color }}" routerLink="/profil" [attr.aria-label]="'Profil wechseln (' + p.name + ')'">
+                <span class="nav-avatar"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
+                <span class="d-none d-sm-inline text-truncate">{{ p.name }}</span>
               </a>
+              @if (p.grade) {
+                <a class="btn btn-sm btn-outline-primary nav-grade" routerLink="/klassen" aria-label="Andere Klasse ansehen">
+                  <span>Kl. {{ p.grade }}</span>
+                  <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                </a>
+              }
+              <a class="btn btn-sm btn-outline-primary nav-stars" routerLink="/fortschritt" aria-label="Mein Fortschritt">
+                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                <span>{{ progress.data().totalStars }}</span>
+              </a>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary nav-sound"
+                [attr.aria-pressed]="progress.sound()"
+                [attr.aria-label]="progress.sound() ? 'Töne ausschalten' : 'Töne einschalten'"
+                (click)="progress.setSound(!progress.sound())"
+              >
+                <i class="bi" [class.bi-volume-up-fill]="progress.sound()" [class.bi-volume-mute-fill]="!progress.sound()" aria-hidden="true"></i>
+              </button>
             }
+            <button type="button" class="btn btn-sm btn-outline-secondary nav-logout" aria-label="Abmelden" (click)="auth.logout()">
+              <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+              <span class="d-none d-sm-inline">Abmelden</span>
+            </button>
+          } @else {
+            <a class="btn btn-sm btn-primary nav-login" routerLink="/login">Anmelden</a>
           }
-          <a class="btn btn-sm btn-outline-primary nav-stars" routerLink="/fortschritt" aria-label="Mein Fortschritt">
-            <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-            <span>{{ progress.data().totalStars }}</span>
-          </a>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary nav-sound"
-            [attr.aria-pressed]="progress.sound()"
-            [attr.aria-label]="progress.sound() ? 'Töne ausschalten' : 'Töne einschalten'"
-            (click)="progress.setSound(!progress.sound())"
-          >
-            <i class="bi" [class.bi-volume-up-fill]="progress.sound()" [class.bi-volume-mute-fill]="!progress.sound()" aria-hidden="true"></i>
-          </button>
         </div>
       </div>
     </nav>
@@ -50,6 +59,7 @@ import { ProgressStore } from './core/progress/progress-store';
   `,
 })
 export class App {
+  protected readonly auth = inject(AuthService);
   protected readonly progress = inject(ProgressStore);
   protected readonly profiles = inject(ProfileStore);
 }

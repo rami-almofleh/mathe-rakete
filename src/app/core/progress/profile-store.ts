@@ -1,6 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Grade, isGrade } from '../models';
-import { PROGRESS_STORAGE } from './progress-storage';
+import { ApiClient } from '../auth/api-client';
 
 export const PROFILE_ICONS = [
   'bi-rocket-takeoff-fill', 'bi-star-fill', 'bi-heart-fill', 'bi-lightning-charge-fill',
@@ -24,43 +24,17 @@ export interface Profile {
 export type ProfileDraft = Omit<Profile, 'id'>;
 
 interface ProfilesData {
-  readonly version: 1;
   readonly profiles: readonly Profile[];
   readonly activeId: string | null;
 }
 
-const PROFILES_KEY = 'mathe-rakete.profiles';
-/** Fortschritt vor der Einführung von Profilen */
-export const LEGACY_PROGRESS_KEY = 'mathe-rakete.progress';
+interface ProfilesResponse {
+  readonly profiles: readonly Profile[];
+  readonly activeId: string | null;
+  readonly totalStars: Readonly<Record<string, number>>;
+}
+
 export const MAX_NAME_LENGTH = 20;
-
-export function progressKey(profileId: string): string {
-  return `${LEGACY_PROGRESS_KEY}.${profileId}`;
-}
-
-/** Auch für Sicherungsdateien genutzt (backup.ts) – prüft und säubert dieselbe Form. */
-export function parseProfiles(raw: string | null): ProfilesData {
-  const empty: ProfilesData = { version: 1, profiles: [], activeId: null };
-  if (!raw) return empty;
-  try {
-    const data = JSON.parse(raw) as Partial<ProfilesData>;
-    if (data.version !== 1 || !Array.isArray(data.profiles)) return empty;
-    const profiles = data.profiles
-      .filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string')
-      .map((p) => ({
-        id: p.id,
-        name: p.name.slice(0, MAX_NAME_LENGTH),
-        icon: PROFILE_ICONS.includes(p.icon as (typeof PROFILE_ICONS)[number]) ? p.icon : PROFILE_ICONS[0],
-        color: PROFILE_COLORS.includes(p.color) ? p.color : 'primary',
-        grade: isGrade(p.grade) ? p.grade : null,
-        state: typeof p.state === 'string' ? p.state : 'de',
-      }));
-    const activeId = profiles.some((p) => p.id === data.activeId) ? data.activeId! : null;
-    return { version: 1, profiles, activeId };
-  } catch {
-    return empty;
-  }
-}
 
 function newId(): string {
   try {
@@ -70,82 +44,97 @@ function newId(): string {
   }
 }
 
-/** Kinder-Profile auf diesem Gerät – jedes Profil hat seinen eigenen Fortschritt. */
+/** Prüft/säubert eine ProfilesResponse vom Server, genau wie früher gespeicherte Browser-Daten. */
+export function sanitizeProfile(p: Partial<Profile> & { id: string }): Profile {
+  return {
+    id: p.id,
+    name: typeof p.name === 'string' ? p.name.slice(0, MAX_NAME_LENGTH) : '',
+    icon: PROFILE_ICONS.includes(p.icon as (typeof PROFILE_ICONS)[number]) ? p.icon! : PROFILE_ICONS[0],
+    color: PROFILE_COLORS.includes(p.color as ProfileColor) ? (p.color as ProfileColor) : 'primary',
+    grade: isGrade(p.grade) ? p.grade : null,
+    state: typeof p.state === 'string' ? p.state : 'de',
+  };
+}
+
+/**
+ * Kinder-Profile des angemeldeten Kontos. Lokal-zuerst: jede Änderung wirkt sofort auf die
+ * Signale (damit die Oberfläche wie gewohnt sofort reagiert) und wird zusätzlich im Hintergrund
+ * zum Server geschickt (`void this.api...().catch(...)`, nicht abgewartet). `hydrate()` holt den
+ * Stand vom Server – einmal nach dem Anmelden, aufgerufen von `AuthService`.
+ */
 @Injectable({ providedIn: 'root' })
 export class ProfileStore {
-  private readonly storage = inject(PROGRESS_STORAGE);
-  private readonly _data = signal<ProfilesData>(this.load());
+  private readonly api = inject(ApiClient);
+
+  private readonly _data = signal<ProfilesData>({ profiles: [], activeId: null });
+  private readonly _totalStars = signal<Readonly<Record<string, number>>>({});
+  private readonly _loading = signal(false);
 
   readonly profiles = computed(() => this._data().profiles);
   readonly activeId = computed(() => this._data().activeId);
   readonly active = computed(() => this.profiles().find((p) => p.id === this.activeId()) ?? null);
+  readonly loading = this._loading.asReadonly();
+
+  /** Vom Server holen (nach Login, oder erneut versuchen, falls der erste Versuch fehlschlug). */
+  async hydrate(): Promise<void> {
+    this._loading.set(true);
+    try {
+      const res = await this.api.get<ProfilesResponse>('/profiles');
+      const profiles = res.profiles.map(sanitizeProfile);
+      const activeId = profiles.some((p) => p.id === res.activeId) ? res.activeId : null;
+      this._data.set({ profiles, activeId });
+      this._totalStars.set(res.totalStars);
+    } catch {
+      // Verbindung/Server nicht erreichbar – vorherigen Stand (falls vorhanden) einfach behalten
+    } finally {
+      this._loading.set(false);
+    }
+  }
+
+  /** Beim Abmelden: nichts vom vorigen Konto darf für das nächste sichtbar bleiben. */
+  clear(): void {
+    this._data.set({ profiles: [], activeId: null });
+    this._totalStars.set({});
+  }
+
+  totalStarsOf(profileId: string): number {
+    return this._totalStars()[profileId] ?? 0;
+  }
+
+  /** Von `ProgressStore` nach jeder Runde aufgerufen, damit die Profilkarten sofort mitziehen. */
+  setTotalStars(profileId: string, value: number): void {
+    this._totalStars.update((m) => ({ ...m, [profileId]: value }));
+  }
 
   create(draft: ProfileDraft): Profile {
     const profile: Profile = { ...draft, name: draft.name.trim().slice(0, MAX_NAME_LENGTH), id: newId() };
-    const first = this._data().profiles.length === 0;
-    if (first) this.adoptLegacyProgress(profile.id);
-    this.save({ ...this._data(), profiles: [...this._data().profiles, profile], activeId: profile.id });
+    this._data.update((d) => ({ profiles: [...d.profiles, profile], activeId: profile.id }));
+    this._totalStars.update((m) => ({ ...m, [profile.id]: 0 }));
+    void this.api.post('/profiles', profile).catch(() => {
+      // Bestenfalls beim nächsten hydrate() wieder synchron – für ein einzelnes Familien-Gerät
+      // ist ein verlorener Schreibversuch unwahrscheinlich und nicht kritisch.
+    });
     return profile;
   }
 
   update(id: string, draft: ProfileDraft): void {
-    const profiles = this._data().profiles.map((p) => (p.id === id ? { ...draft, id, name: draft.name.trim().slice(0, MAX_NAME_LENGTH) } : p));
-    this.save({ ...this._data(), profiles });
+    const name = draft.name.trim().slice(0, MAX_NAME_LENGTH);
+    this._data.update((d) => ({ ...d, profiles: d.profiles.map((p) => (p.id === id ? { ...draft, id, name } : p)) }));
+    void this.api.put(`/profiles/${id}`, { ...draft, name }).catch(() => {});
   }
 
   remove(id: string): void {
-    const profiles = this._data().profiles.filter((p) => p.id !== id);
-    const activeId = this._data().activeId === id ? (profiles[0]?.id ?? null) : this._data().activeId;
-    try {
-      this.storage?.removeItem(progressKey(id));
-    } catch {
-      // egal – ohne Profil wird der Eintrag nie wieder gelesen
-    }
-    this.save({ ...this._data(), profiles, activeId });
+    this._data.update((d) => {
+      const profiles = d.profiles.filter((p) => p.id !== id);
+      const activeId = d.activeId === id ? (profiles[0]?.id ?? null) : d.activeId;
+      return { profiles, activeId };
+    });
+    void this.api.delete(`/profiles/${id}`).catch(() => {});
   }
 
   select(id: string): void {
-    if (this._data().profiles.some((p) => p.id === id)) {
-      this.save({ ...this._data(), activeId: id });
-    }
-  }
-
-  /**
-   * Ersetzt ALLE Profile (Sicherung einlesen, siehe backup.ts). Der Fortschritt je Profil muss
-   * vorher schon im Speicher stehen – `BackupService.restore` schreibt ihn davor.
-   */
-  replaceAll(profiles: readonly Profile[], activeId: string | null): void {
-    const validActive = profiles.some((p) => p.id === activeId) ? activeId : (profiles[0]?.id ?? null);
-    this.save({ version: 1, profiles, activeId: validActive });
-  }
-
-  /** Den Fortschritt aus der Zeit vor den Profilen übernimmt das erste Profil. */
-  private adoptLegacyProgress(profileId: string): void {
-    try {
-      const legacy = this.storage?.getItem(LEGACY_PROGRESS_KEY);
-      if (legacy) {
-        this.storage?.setItem(progressKey(profileId), legacy);
-        this.storage?.removeItem(LEGACY_PROGRESS_KEY);
-      }
-    } catch {
-      // kein Speicher – nichts zu übernehmen
-    }
-  }
-
-  private load(): ProfilesData {
-    try {
-      return parseProfiles(this.storage?.getItem(PROFILES_KEY) ?? null);
-    } catch {
-      return parseProfiles(null);
-    }
-  }
-
-  private save(data: ProfilesData): void {
-    this._data.set(data);
-    try {
-      this.storage?.setItem(PROFILES_KEY, JSON.stringify(data));
-    } catch {
-      // Speicher blockiert – Profile gelten nur für diese Sitzung
-    }
+    if (!this.profiles().some((p) => p.id === id)) return;
+    this._data.update((d) => ({ ...d, activeId: id }));
+    void this.api.put('/profiles/active', { id }).catch(() => {});
   }
 }

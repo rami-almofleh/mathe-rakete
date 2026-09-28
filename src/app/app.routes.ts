@@ -1,5 +1,6 @@
 import { inject, Injector } from '@angular/core';
 import { Router, Routes } from '@angular/router';
+import { AuthService } from './core/auth/auth.service';
 import { ProfileStore } from './core/progress/profile-store';
 
 /**
@@ -13,7 +14,19 @@ const withSession = async (check: (session: import('./core/quiz/quiz-session').Q
   return check(injector.get(QuizSession)) || router.createUrlTree(['/']);
 };
 
-/** Ohne gewähltes Profil zuerst „Wer übt heute?“ */
+/** Wartet einmalig, bis ein vorhandenes Anmelde-Token geprüft (und die Profile geladen) wurden. */
+const authReady = async () => {
+  await inject(AuthService).whenReady();
+  return true;
+};
+
+/** Ohne Anmeldung geht es zuerst zum Login. */
+const needsAuth = () => inject(AuthService).isAuthed() || inject(Router).createUrlTree(['/login']);
+
+/** Schon angemeldet? Dann hat die Login-Seite nichts mehr zu tun. */
+const redirectIfAuthed = () => !inject(AuthService).isAuthed() || inject(Router).createUrlTree(['/']);
+
+/** Ohne gewähltes Profil zuerst „Wer übt heute?” */
 const needsProfile = () => inject(ProfileStore).active() !== null || inject(Router).createUrlTree(['/profil']);
 
 /**
@@ -44,47 +57,54 @@ const startReview = async () => {
 
 export const routes: Routes = [
   {
+    path: 'login',
+    title: 'Anmelden – Mathe-Rakete',
+    canActivate: [authReady, redirectIfAuthed],
+    loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
+  },
+  {
     path: 'profil',
     title: 'Wer übt heute? – Mathe-Rakete',
+    canActivate: [authReady, needsAuth],
     loadComponent: () => import('./features/profile/profile-page').then((m) => m.ProfilePage),
   },
   {
     path: '',
     title: 'Mathe-Rakete',
-    canActivate: [needsProfile, goToOwnGrade],
+    canActivate: [authReady, needsAuth, needsProfile, goToOwnGrade],
     loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
   },
   {
     // Klassen-Übersicht, auch wenn im Profil schon eine Klasse gespeichert ist – erreichbar über den Klassen-Chip in der Navigation
     path: 'klassen',
     title: 'Klasse wählen – Mathe-Rakete',
-    canActivate: [needsProfile],
+    canActivate: [authReady, needsAuth, needsProfile],
     loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
   },
   {
     path: 'klasse/:grade',
     title: 'Einstellungen – Mathe-Rakete',
-    canActivate: [needsProfile],
+    canActivate: [authReady, needsAuth, needsProfile],
     loadComponent: () => import('./features/setup/setup-page').then((m) => m.SetupPage),
   },
   {
     path: 'quiz',
     title: 'Quiz – Mathe-Rakete',
-    canActivate: [needsProfile, hasRunningQuiz],
+    canActivate: [authReady, needsAuth, needsProfile, hasRunningQuiz],
     loadComponent: () => import('./features/quiz/quiz-page').then((m) => m.QuizPage),
   },
   {
     path: 'ergebnis',
     title: 'Ergebnis – Mathe-Rakete',
-    canActivate: [needsProfile, hasResult],
+    canActivate: [authReady, needsAuth, needsProfile, hasResult],
     loadComponent: () => import('./features/result/result-page').then((m) => m.ResultPage),
   },
   {
     path: 'fortschritt',
     title: 'Fortschritt – Mathe-Rakete',
-    canActivate: [needsProfile],
+    canActivate: [authReady, needsAuth, needsProfile],
     loadComponent: () => import('./features/progress/progress-page').then((m) => m.ProgressPage),
   },
-  { path: 'wiederholen', canActivate: [needsProfile, startReview], children: [] },
+  { path: 'wiederholen', canActivate: [authReady, needsAuth, needsProfile, startReview], children: [] },
   { path: '**', redirectTo: '' },
 ];

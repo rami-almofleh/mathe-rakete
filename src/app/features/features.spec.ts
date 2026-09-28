@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { PROGRESS_STORAGE } from '../core/progress/progress-store';
+import { ApiClient } from '../core/auth/api-client';
+import { FakeApiClient } from '../core/testing/fake-api-client';
 import { QuizSession } from '../core/quiz/quiz-session';
 import { HomePage } from './home/home-page';
 import { QuizPage } from './quiz/quiz-page';
@@ -9,7 +10,7 @@ import { SetupPage } from './setup/setup-page';
 
 function setup() {
   TestBed.configureTestingModule({
-    providers: [provideRouter([{ path: '**', children: [] }]), { provide: PROGRESS_STORAGE, useValue: null }],
+    providers: [provideRouter([{ path: '**', children: [] }]), { provide: ApiClient, useValue: new FakeApiClient() }],
   });
 }
 

@@ -42,3 +42,15 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Backend (server/)
+/server/node_modules
+/server/dist
+/server/data
+server/.env
+server/.env.production
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+/logs

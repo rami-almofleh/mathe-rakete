@@ -1,7 +1,7 @@
 import { InjectionToken } from '@angular/core';
 
-/** Speicher für Profile und Fortschritt; in Tests austauschbar. `null` = kein Speicher verfügbar. */
-export const PROGRESS_STORAGE = new InjectionToken<Storage | null>('PROGRESS_STORAGE', {
+/** Speicher für das Login-Token; in Tests austauschbar. `null` = kein Speicher verfügbar. */
+export const TOKEN_STORAGE = new InjectionToken<Storage | null>('TOKEN_STORAGE', {
   providedIn: 'root',
   factory: () => {
     try {
@@ -11,3 +11,5 @@ export const PROGRESS_STORAGE = new InjectionToken<Storage | null>('PROGRESS_STO
     }
   },
 });
+
+export const TOKEN_KEY = 'mathe-rakete.token';

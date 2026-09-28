@@ -1,6 +1,6 @@
 # Mathe-Lern-App – Plan
 
-Angular 22 · Bootstrap 5.3 · Bootstrap Icons · kein Backend (alles läuft im Browser)
+Angular 22 · Bootstrap 5.3 · Bootstrap Icons · Node/Express-Backend unter `/api` · SQLite
 
 Fachliche Grundlage: [docs/RECHERCHE.md](docs/RECHERCHE.md) (KMK-Bildungsstandards, Kl. 1–12)
 
@@ -14,7 +14,7 @@ Fachliche Grundlage: [docs/RECHERCHE.md](docs/RECHERCHE.md) (KMK-Bildungsstandar
 | Antworten | Immer **3 Antwortmöglichkeiten, genau 1 richtig**; falsche Antworten aus typischen Schülerfehlern |
 | Filter | Rechenarten **+ − · :** und Schwierigkeit **einfach / mittel / schwer** |
 | Timer | **Aus**, **pro Aufgabe** (z. B. 10/20/30/60 s) oder **pro Runde** (z. B. 1/2/3/5 min) |
-| Speichern | Fortschritt lokal im Browser (localStorage), kein Login |
+| Speichern | Konto (E-Mail/Passwort) + Server-Datenbank (SQLite) – Profile und Fortschritt sind auf allen Geräten sichtbar, auf denen sich das Kind anmeldet (siehe Phase 13) |
 | Sprache | Deutsch, Zahlen im deutschen Format (Dezimalkomma, `·` und `:`) |
 | Formeln | Kl. 1–4 als Text in Kinderschrift; Brüche, Potenzen, Wurzeln … mit **KaTeX** (wird erst bei Bedarf geladen) |
 | Name | **Mathe-Rakete** |
@@ -182,4 +182,38 @@ eine = Lösung). Schlägt die Validierung fehl, wird neu erzeugt.
 - [x] Bundesland je Profil (Feld im Profil-Formular); Einstellungs- und Fortschritts-Seite berücksichtigen es
 - [x] Bekannte Lücke dokumentiert: der feste Grundschul-Plan für „Rechnen“ (`arithmetic-plan.ts`) ist noch nicht bundesland-abhängig
 - [x] Tests: Konsistenz der Override-Tabelle (gültige Themen/Klassen), Themen wandern in die neue Klasse und verschwinden aus der alten, Wiederholungsliste zieht mit; im Browser geprüft (Bayern-Profil: „Negative Zahlen“ in Kl. 5 statt Kl. 7)
+
+## Phase 13 – Konten & Server-Sync
+Bisher lagen Profile und Fortschritt nur lokal im `localStorage` des Geräts. Damit ein Kind auf
+mehreren Geräten denselben Fortschritt sieht, gibt es jetzt ein echtes Backend mit Datenbank im
+selben Projekt (kein Datei-Export/Import). **Wichtig:** Es gibt keine automatische Übernahme alter
+`localStorage`-Daten – wer schon Profile hatte, legt nach der Anmeldung neue Profile an.
+
+- [x] Node/Express-Backend unter `server/` (eigenes `package.json`, TypeScript), erreichbar über `/api`
+      auf **derselben Domain** wie das Frontend (in der Produktion bedient ein einziger Express-Prozess
+      sowohl `/api/*` als auch die gebauten Angular-Dateien inkl. SPA-Fallback für Deep-Links)
+- [x] SQLite (`better-sqlite3`) mit getrennter Datenbank für Entwicklung (`server/data/dev.sqlite`)
+      und Produktion (`DATABASE_PATH`, außerhalb des Projektordners) sowie `:memory:` für Tests
+- [x] Konten: E-Mail/Passwort-Anmeldung (`bcryptjs`, JWT via `jsonwebtoken`), IP-Rate-Limit auf
+      `/register`/`/login`
+- [x] Profile und Fortschritt liegen jetzt je Konto auf dem Server (`profiles`, `progress`-Tabellen);
+      Sterne sind zusätzlich denormalisiert (`profiles.total_stars`) für die schnelle Profilauswahl
+- [x] Frontend „lokal zuerst“: `ProfileStore`/`ProgressStore` aktualisieren ihre Signale sofort und
+      schicken die Änderung unabhängig davon im Hintergrund an den Server (kein Warten, kein Blockieren
+      der Oberfläche); `hydrate()` holt bei Anmeldung/Profilwechsel den Serverstand
+  - [x] neuer `AuthService` (Registrieren/Anmelden/Abmelden, meldet bei abgelaufenem Token automatisch ab) + Login-Seite (`/login`)
+- [x] Routen-Wächter: `authReady` (wartet auf die einmalige Token-Prüfung), `needsAuth` (leitet ohne
+      Anmeldung zu `/login`); Navigation zeigt „Anmelden“/„Abmelden“ je nach Status
+- [x] Ein Befehl startet beides zusammen in der Entwicklung: `npm run dev` (Angular-Dev-Server + Express
+      via `concurrently`, `proxy.conf.json` leitet `/api` an den Express-Prozess weiter)
+- [x] Tests: 15 Backend-Tests (`node:test`, pro Route: Erfolg, Validierung, fremde Konten/Profile
+      bekommen 404), Frontend-Stores gegen einen In-Memory-`FakeApiClient` (`core/testing/fake-api-client.ts`)
+      statt echtem Netzwerk
+- [x] Produktions-Smoke-Test: `npm run build:all` + `node server/dist/index.js` – ein Prozess liefert
+      SPA (inkl. Deep-Link nach Neuladen) und `/api` auf einem Port; im Browser durchgespielt: Konto
+      anlegen → Profil anlegen → Runde spielen (Sterne + Abzeichen) → abmelden → erneut anmelden →
+      Profil, Klasse, Sterne und Fortschrittsseite (Themen, Abzeichen, Wiederholungsliste) sind unverändert da
+- [x] `DEPLOYMENT.md`: Server-Einrichtung von Grund auf (Projekt klonen, SSL-Zertifikat, `.env.production`),
+      Build, pm2 (`ecosystem.config.cjs`), nginx/Caddy-Reverse-Proxy-Beispiel, Update-Ablauf mit
+      Datenbank-Backup **vor** jedem `git pull`
 

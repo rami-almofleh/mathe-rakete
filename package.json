@@ -6,7 +6,14 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "postinstall": "npm --prefix server install",
+    "dev": "concurrently -k -n web,api -c blue,green \"npm run start -- --port 4310\" \"npm run dev:server\"",
+    "dev:server": "npm --prefix server run dev",
+    "build:all": "npm run build && npm --prefix server run build",
+    "start:prod": "npm --prefix server run start",
+    "test:server": "npm --prefix server test",
+    "test:all": "npm run test -- --watch=false && npm run test:server"
   },
   "private": true,
   "packageManager": "npm@11.16.0",
@@ -27,6 +34,7 @@
     "@angular/build": "^22.2.0",
     "@angular/cli": "^22.2.0",
     "@angular/compiler-cli": "^22.2.0",
+    "concurrently": "^9.1.0",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

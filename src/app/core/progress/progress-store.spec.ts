@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { plain, QuizSettings, Task } from '../models';
-import { ProfileStore, progressKey } from './profile-store';
-import { EMPTY_PROGRESS, parseProgress, PROGRESS_STORAGE, ProgressStore } from './progress-store';
+import { ApiClient } from '../auth/api-client';
+import { FakeApiClient } from '../testing/fake-api-client';
+import { ProfileStore } from './profile-store';
+import { EMPTY_PROGRESS, parseProgress, ProgressStore } from './progress-store';
 
 const settings: QuizSettings = {
   grade: 3,
@@ -13,23 +15,8 @@ const settings: QuizSettings = {
   taskCount: 10,
 };
 
-/** Kleiner Speicher im Arbeitsspeicher statt localStorage. */
-function memoryStorage(initial: Record<string, string> = {}): Storage {
-  const data = new Map(Object.entries(initial));
-  return {
-    get length() {
-      return data.size;
-    },
-    clear: () => data.clear(),
-    getItem: (k) => data.get(k) ?? null,
-    key: (i) => [...data.keys()][i] ?? null,
-    removeItem: (k) => void data.delete(k),
-    setItem: (k, v) => void data.set(k, v),
-  };
-}
-
-function storeWith(storage: Storage | null): ProgressStore {
-  TestBed.configureTestingModule({ providers: [{ provide: PROGRESS_STORAGE, useValue: storage }] });
+function storeWith(api: FakeApiClient): ProgressStore {
+  TestBed.configureTestingModule({ providers: [{ provide: ApiClient, useValue: api }] });
   TestBed.inject(ProfileStore).create({ name: 'Lena', icon: 'bi-star-fill', color: 'sun', grade: 3, state: 'de' });
   return TestBed.inject(ProgressStore);
 }
@@ -71,8 +58,8 @@ describe('parseProgress', () => {
 
 describe('ProgressStore', () => {
   it('records rounds, topic statistics and the best streak', () => {
-    const storage = memoryStorage();
-    const store = storeWith(storage);
+    const api = new FakeApiClient();
+    const store = storeWith(api);
     store.recordRound(settings, answers('1111101111'), 2);
     const data = store.data();
     expect(data.roundsPlayed).toBe(1);
@@ -81,13 +68,13 @@ describe('ProgressStore', () => {
     expect(data.topics['k3-add-1000']).toMatchObject({ answered: 10, correct: 9 });
     expect(data.recentRounds[0]).toMatchObject({ grade: 3, correct: 9, total: 10, stars: 2 });
     expect(store.accuracy()).toBe(0.9);
-    // wirklich gespeichert
+    // wirklich an den Server geschickt
     const id = TestBed.inject(ProfileStore).activeId()!;
-    expect(parseProgress(storage.getItem(progressKey(id))).roundsPlayed).toBe(1);
+    expect(api.hasProgress(id)).toBe(true);
   });
 
   it('awards each badge only once', () => {
-    const store = storeWith(memoryStorage());
+    const store = storeWith(new FakeApiClient());
     const first = store.recordRound(settings, answers('1111111111'), 3).map((b) => b.id);
     expect(first).toEqual(expect.arrayContaining(['first-round', 'perfect', 'streak-10', 'speedy', 'all-ops', 'hard']));
     const second = store.recordRound(settings, answers('1111111111'), 3).map((b) => b.id);
@@ -96,7 +83,7 @@ describe('ProgressStore', () => {
   });
 
   it('keeps mistakes for review and removes them once solved', () => {
-    const store = storeWith(memoryStorage());
+    const store = storeWith(new FakeApiClient());
     store.recordRound(settings, answers('1010'), 1);
     expect(store.mistakes().map((m) => m.task.prompt.math.value)).toEqual(['3 + 3 = ?', '1 + 1 = ?']);
     // gleiche Aufgabe noch einmal falsch → Zähler steigt, bleibt einmal in der Liste
@@ -110,7 +97,7 @@ describe('ProgressStore', () => {
   });
 
   it('tracks how unsure the child is per topic', () => {
-    const store = storeWith(memoryStorage());
+    const store = storeWith(new FakeApiClient());
     expect(store.weakness('k1-add-10')).toBeCloseTo(0.25);
     store.recordRound(settings, answers('0000', 'k1-add-10'), 0);
     store.recordRound(settings, answers('1111', 'k1-sub-10'), 3);
@@ -119,30 +106,29 @@ describe('ProgressStore', () => {
   });
 
   it('remembers the last settings per grade', () => {
-    const store = storeWith(memoryStorage());
+    const store = storeWith(new FakeApiClient());
     store.rememberSettings(settings);
     expect(store.settingsFor(3)).toEqual(settings);
     expect(store.settingsFor(4)).toBeUndefined();
   });
 
-  it('keeps working without storage (e.g. blocked site data)', () => {
-    const store = storeWith(null);
+  it('keeps working without an active profile', () => {
+    TestBed.configureTestingModule({ providers: [{ provide: ApiClient, useValue: new FakeApiClient() }] });
+    const store = TestBed.inject(ProgressStore);
     store.recordRound(settings, answers('11'), 1);
     expect(store.data().roundsPlayed).toBe(1);
   });
 
-  it('survives a storage that throws', () => {
-    const broken = memoryStorage();
-    broken.setItem = () => {
-      throw new Error('QuotaExceeded');
-    };
-    const store = storeWith(broken);
+  it('keeps working when the server is unreachable', () => {
+    const api = new FakeApiClient();
+    const store = storeWith(api);
+    api.failNext = true;
     expect(() => store.recordRound(settings, answers('1'), 1)).not.toThrow();
     expect(store.data().roundsPlayed).toBe(1);
   });
 
   it('resets everything except the sound setting', () => {
-    const store = storeWith(memoryStorage());
+    const store = storeWith(new FakeApiClient());
     store.setSound(true);
     store.recordRound(settings, answers('11'), 1);
     store.reset();

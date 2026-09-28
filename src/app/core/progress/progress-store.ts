@@ -1,10 +1,8 @@
-import { computed, Injectable, inject, linkedSignal } from '@angular/core';
+import { computed, effect, Injectable, inject, signal } from '@angular/core';
 import { Grade, isGrade, QuizSettings, Task } from '../models';
+import { ApiClient } from '../auth/api-client';
 import { Badge, BADGES, RoundResult } from './badges';
-import { ProfileStore, progressKey } from './profile-store';
-import { PROGRESS_STORAGE } from './progress-storage';
-
-export { PROGRESS_STORAGE } from './progress-storage';
+import { ProfileStore } from './profile-store';
 
 export interface TopicStats {
   readonly answered: number;
@@ -73,7 +71,7 @@ export const EMPTY_PROGRESS: ProgressData = {
   sound: false,
 };
 
-/** Liest gespeicherte Daten und ergänzt fehlende Felder; unbrauchbare Daten → leerer Fortschritt. */
+/** Prüft/säubert eine Server-Antwort, genau wie früher gespeicherte Browser-Daten. */
 export function parseProgress(raw: string | null): ProgressData {
   if (!raw) return EMPTY_PROGRESS;
   try {
@@ -102,18 +100,22 @@ export function parseProgress(raw: string | null): ProgressData {
   }
 }
 
-/** Fortschritt des aktiven Kinder-Profils – lokal im Browser, ohne Konto. */
+/**
+ * Fortschritt des aktiven Kinder-Profils. Lokal-zuerst wie `ProfileStore`: alle Berechnungen
+ * (Serien, Abzeichen, Fehlerliste, Unsicherheit je Thema) laufen unverändert rein im Speicher;
+ * jede Änderung wird zusätzlich im Hintergrund an den Server geschickt. `hydrate()` holt den
+ * Stand vom Server – automatisch einmal pro Profilwechsel (siehe `effect()` im Konstruktor).
+ */
 @Injectable({ providedIn: 'root' })
 export class ProgressStore {
-  private readonly storage = inject(PROGRESS_STORAGE);
+  private readonly api = inject(ApiClient);
   private readonly profiles = inject(ProfileStore);
-  /** Wird neu geladen, sobald ein anderes Profil ausgewählt wird. */
-  private readonly _data = linkedSignal<string | null, ProgressData>({
-    source: this.profiles.activeId,
-    computation: (id) => this.load(id),
-  });
+
+  private readonly _data = signal<ProgressData>(EMPTY_PROGRESS);
+  private readonly _loading = signal(false);
 
   readonly data = this._data.asReadonly();
+  readonly loading = this._loading.asReadonly();
   readonly sound = computed(() => this._data().sound);
   readonly earnedBadges = computed(() => new Set(this._data().badges));
 
@@ -125,9 +127,34 @@ export class ProgressStore {
 
   readonly mistakes = computed(() => this._data().mistakes);
 
+  constructor() {
+    // Ersetzt das frühere linkedSignal auf localStorage: bei jedem Profilwechsel (auch dem
+    // ersten nach dem Login) neu vom Server holen, ohne dass ein Aufrufer das anstoßen muss.
+    effect(() => {
+      const id = this.profiles.activeId();
+      void this.hydrate(id);
+    });
+  }
+
   /** Wie unsicher das Kind in einem Thema ist (0 = sicher, 1 = alles falsch). */
   weakness(topicId: string): number {
     return 1 - (this._data().topics[topicId]?.recent ?? UNSEEN_CONFIDENCE);
+  }
+
+  async hydrate(profileId: string | null = this.profiles.activeId()): Promise<void> {
+    if (!profileId) {
+      this._data.set(EMPTY_PROGRESS);
+      return;
+    }
+    this._loading.set(true);
+    try {
+      const raw = await this.api.get<unknown>(`/progress/${profileId}`);
+      this._data.set(parseProgress(JSON.stringify(raw)));
+    } catch {
+      // Server nicht erreichbar – zeigt weiter, was zuletzt bekannt war
+    } finally {
+      this._loading.set(false);
+    }
   }
 
   /**
@@ -207,27 +234,17 @@ export class ProgressStore {
 
   /** Sterne eines (auch nicht aktiven) Profils – für die Profilauswahl. */
   starsOf(profileId: string): number {
-    return this.load(profileId).totalStars;
-  }
-
-  private load(profileId: string | null): ProgressData {
-    if (!profileId) return EMPTY_PROGRESS;
-    try {
-      return parseProgress(this.storage?.getItem(progressKey(profileId)) ?? null);
-    } catch {
-      return EMPTY_PROGRESS;
-    }
+    return this.profiles.totalStarsOf(profileId);
   }
 
   private save(data: ProgressData): void {
-    this._data.set(data);
+    this._data.set(data); // sofort sichtbar, unverändert synchron wie zuvor
     const id = this.profiles.activeId();
-    if (!id) return; // ohne Profil nur für diese Sitzung
-    try {
-      this.storage?.setItem(progressKey(id), JSON.stringify(data));
-    } catch {
-      // Speicher voll oder blockiert – der Fortschritt gilt dann nur für diese Sitzung
-    }
+    if (!id) return; // ohne Profil nichts zu speichern
+    this.profiles.setTotalStars(id, data.totalStars); // Profilkarten sofort mitziehen lassen
+    void this.api.put(`/progress/${id}`, data).catch(() => {
+      // Bestenfalls beim nächsten hydrate() wieder synchron
+    });
   }
 }
 
