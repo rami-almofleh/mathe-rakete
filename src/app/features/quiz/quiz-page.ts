@@ -57,9 +57,7 @@ export class QuizPage implements OnDestroy {
 
   constructor() {
     effect(() => {
-      if (this.phase() === 'finished') {
-        void this.router.navigate(['/ergebnis']);
-      }
+      if (this.phase() === 'finished') this.goToResult();
     });
 
     effect((onCleanup) => {
@@ -107,9 +105,17 @@ export class QuizPage implements OnDestroy {
       return;
     }
 
+    // 2) Runde ist fertig, aber der Wechsel zur Ergebnis-Seite kam nicht an (z. B. Netz hing) → erneut versuchen
+    if (phase === 'finished' && now - this.watch.since > STUCK_MS) {
+      this.logger.report('stuck', 'Runde fertig, aber die Ergebnis-Seite öffnete sich nicht', { context: context() });
+      this.watch.since = now;
+      this.goToResult();
+      return;
+    }
+
     if (phase !== 'question') return;
 
-    // 2) Offene Frage mit Timer, aber die Zeit läuft nicht mehr
+    // 3) Offene Frage mit Timer, aber die Zeit läuft nicht mehr
     const timer = this.session.settings()?.timer;
     if (timer && timer.mode !== 'off') {
       const remaining = this.session.remainingMs();
@@ -123,7 +129,7 @@ export class QuizPage implements OnDestroy {
       }
     }
 
-    // 3) Frage offen, aber die angezeigten Kacheln sind noch gesperrt → Anzeige aktualisiert sich nicht mehr
+    // 4) Frage offen, aber die angezeigten Kacheln sind noch gesperrt → Anzeige aktualisiert sich nicht mehr
     const disabled = this.host.nativeElement.querySelectorAll('.choice:disabled').length;
     if (disabled > 0 && now - this.watch.since > STUCK_MS) {
       this.logger.report('stuck', 'Antwort-Kacheln gesperrt, obwohl eine Frage offen ist (Anzeige hängt)', {
@@ -131,6 +137,16 @@ export class QuizPage implements OnDestroy {
       });
       this.watch.since = now;
     }
+  }
+
+  private goToResult(): void {
+    this.logger.breadcrumb('nav:to-result');
+    this.router.navigate(['/ergebnis']).then(
+      (ok) => {
+        if (!ok) this.logger.breadcrumb('nav:to-result-rejected');
+      },
+      (error: Error) => this.logger.report('error', `Wechsel zur Ergebnis-Seite fehlgeschlagen: ${error.message}`, { stack: error.stack }),
+    );
   }
 
   protected choiceState(index: number): ChoiceState {

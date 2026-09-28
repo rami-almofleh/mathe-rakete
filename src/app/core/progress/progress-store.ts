@@ -1,6 +1,6 @@
 import { computed, effect, Injectable, inject, signal } from '@angular/core';
 import { Grade, isGrade, QuizSettings, Task } from '../models';
-import { ApiClient } from '../auth/api-client';
+import { ApiClient, ApiError } from '../auth/api-client';
 import { Badge, BADGES, RoundResult } from './badges';
 import { ProfileStore } from './profile-store';
 
@@ -47,6 +47,9 @@ export interface ProgressData {
 }
 
 const MAX_RECENT_ROUNDS = 30;
+/** Erste Wartezeit vor einem erneuten Speicherversuch; verdoppelt sich bis höchstens 1 Minute */
+const RETRY_START_MS = 2000;
+const RETRY_MAX_MS = 60_000;
 const MAX_MISTAKES = 40;
 /** Gewicht der neuesten Antwort im gleitenden Wert */
 const RECENT_WEIGHT = 0.3;
@@ -127,7 +130,18 @@ export class ProgressStore {
 
   readonly mistakes = computed(() => this._data().mistakes);
 
+  /** Noch nicht beim Server angekommene Stände je Profil (immer nur der neueste) */
+  private readonly pending = new Map<string, ProgressData>();
+  private flushing = false;
+  private retryTimer?: ReturnType<typeof setTimeout>;
+  private retryDelay = RETRY_START_MS;
+
   constructor() {
+    // Verbindung wieder da → liegengebliebene Stände sofort nachschicken
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => void this.flush());
+    }
+
     // Ersetzt das frühere linkedSignal auf localStorage: bei jedem Profilwechsel (auch dem
     // ersten nach dem Login) neu vom Server holen, ohne dass ein Aufrufer das anstoßen muss.
     effect(() => {
@@ -146,9 +160,16 @@ export class ProgressStore {
       this._data.set(EMPTY_PROGRESS);
       return;
     }
+    // Noch nicht gespeicherter lokaler Stand ist neuer als der Server – nicht überschreiben
+    const unsynced = this.pending.get(profileId);
+    if (unsynced) {
+      this._data.set(unsynced);
+      return;
+    }
     this._loading.set(true);
     try {
       const raw = await this.api.get<unknown>(`/progress/${profileId}`);
+      if (this.pending.has(profileId)) return; // während des Ladens lokal weitergespielt
       this._data.set(parseProgress(JSON.stringify(raw)));
     } catch {
       // Server nicht erreichbar – zeigt weiter, was zuletzt bekannt war
@@ -242,9 +263,40 @@ export class ProgressStore {
     const id = this.profiles.activeId();
     if (!id) return; // ohne Profil nichts zu speichern
     this.profiles.setTotalStars(id, data.totalStars); // Profilkarten sofort mitziehen lassen
-    void this.api.put(`/progress/${id}`, data).catch(() => {
-      // Bestenfalls beim nächsten hydrate() wieder synchron
-    });
+    this.pending.set(id, data);
+    void this.flush();
+  }
+
+  /**
+   * Schickt ausstehende Stände nacheinander (nie parallel – sonst könnte ein älterer Stand einen neueren
+   * überholen). Bei Netz-/Serverfehlern wird mit wachsendem Abstand erneut versucht, damit keine Sterne
+   * verloren gehen.
+   */
+  private async flush(): Promise<void> {
+    if (this.flushing) return;
+    this.flushing = true;
+    clearTimeout(this.retryTimer);
+    try {
+      while (this.pending.size) {
+        const [id, data] = this.pending.entries().next().value!;
+        try {
+          await this.api.put(`/progress/${id}`, data);
+          if (this.pending.get(id) === data) this.pending.delete(id); // sonst kam inzwischen ein neuerer Stand
+          this.retryDelay = RETRY_START_MS;
+        } catch (error) {
+          // 4xx (außer 408/429): erneutes Senden hilft nicht (z. B. abgemeldet, Profil gelöscht)
+          if (error instanceof ApiError && error.status < 500 && error.status !== 408 && error.status !== 429) {
+            this.pending.delete(id);
+            continue;
+          }
+          this.retryTimer = setTimeout(() => void this.flush(), this.retryDelay);
+          this.retryDelay = Math.min(this.retryDelay * 2, RETRY_MAX_MS);
+          return;
+        }
+      }
+    } finally {
+      this.flushing = false;
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { ClientLogger } from './core/logging/client-logger';
 import { AuthService } from './core/auth/auth.service';
 import { ProfileStore } from './core/progress/profile-store';
 import { ProgressStore } from './core/progress/progress-store';
@@ -66,6 +67,30 @@ export class App {
   protected readonly progress = inject(ProgressStore);
   protected readonly profiles = inject(ProfileStore);
   private readonly router = inject(Router);
+  private readonly logger = inject(ClientLogger);
+
+  constructor() {
+    // Jeder Seitenwechsel als Brotkrume; Fehler und hängende Wechsel werden an den Server gemeldet
+    let pendingTimer: ReturnType<typeof setTimeout> | undefined;
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.logger.breadcrumb('nav:start', { url: event.url });
+        clearTimeout(pendingTimer);
+        pendingTimer = setTimeout(
+          () => this.logger.report('stuck', `Seitenwechsel nach ${event.url} hängt seit 8 s`, { context: { from: location.pathname, online: navigator.onLine } }),
+          8000,
+        );
+      } else if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
+        clearTimeout(pendingTimer);
+        if (event instanceof NavigationEnd) this.logger.breadcrumb('nav:end', { url: event.urlAfterRedirects });
+        if (event instanceof NavigationCancel) this.logger.breadcrumb('nav:cancel', { url: event.url, reason: event.reason });
+        if (event instanceof NavigationError) {
+          const err = event.error as Error;
+          this.logger.report('error', `Seitenwechsel nach ${event.url} fehlgeschlagen: ${err?.message ?? err}`, { stack: err?.stack });
+        }
+      }
+    });
+  }
 
   protected logout(): void {
     this.auth.logout();

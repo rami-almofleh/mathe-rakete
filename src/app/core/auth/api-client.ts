@@ -11,6 +11,9 @@ export class ApiError extends Error {
   }
 }
 
+/** Hängt eine Anfrage länger, wird sie abgebrochen (und z. B. beim Speichern später wiederholt). */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 /** Kleiner fetch-Wrapper: hängt das Login-Token an, meldet 401 zentral (siehe `AuthService`). */
 @Injectable({ providedIn: 'root' })
 export class ApiClient {
@@ -40,9 +43,12 @@ export class ApiClient {
     const token = this.readToken();
     const started = Date.now();
     let res: Response;
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), REQUEST_TIMEOUT_MS);
     try {
       res = await fetch(`/api${path}`, {
         method,
+        signal: abort.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -51,8 +57,13 @@ export class ApiClient {
       });
     } catch (error) {
       // Viele Aufrufe laufen still im Hintergrund – ohne diesen Bericht bliebe ein Verbindungsproblem unsichtbar
-      this.logger.report('api', `${method} ${path} fehlgeschlagen: ${(error as Error).message}`, { context: { ms: Date.now() - started } });
+      const timedOut = abort.signal.aborted;
+      this.logger.report('api', `${method} ${path} fehlgeschlagen: ${timedOut ? `keine Antwort nach ${REQUEST_TIMEOUT_MS / 1000} s` : (error as Error).message}`, {
+        context: { ms: Date.now() - started },
+      });
       throw error;
+    } finally {
+      clearTimeout(timeout);
     }
     if (res.status >= 500) {
       this.logger.report('api', `${method} ${path} → ${res.status}`, { context: { ms: Date.now() - started } });

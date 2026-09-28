@@ -127,6 +127,32 @@ describe('ProgressStore', () => {
     expect(store.data().roundsPlayed).toBe(1);
   });
 
+  it('retries a failed save so no stars get lost', async () => {
+    vi.useFakeTimers();
+    try {
+      const api = new FakeApiClient();
+      const store = storeWith(api);
+      const id = TestBed.inject(ProfileStore).activeId()!;
+      api.failNext = true;
+      store.recordRound(settings, answers('11'), 2);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api.hasProgress(id)).toBe(false); // erster Versuch gescheitert
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(api.hasProgress(id)).toBe(true); // Wiederholung angekommen
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps unsynced local progress instead of an older server state', async () => {
+    const api = new FakeApiClient();
+    const store = storeWith(api);
+    api.failNext = true;
+    store.recordRound(settings, answers('11'), 2);
+    await store.hydrate();
+    expect(store.data().totalStars).toBe(2);
+  });
+
   it('resets everything except the sound setting', () => {
     const store = storeWith(new FakeApiClient());
     store.setSound(true);
