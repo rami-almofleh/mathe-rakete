@@ -226,3 +226,12 @@ selben Projekt (kein Datei-Export/Import). **Wichtig:** Es gibt keine automatisc
 - [x] Ergebnis/Fortschritt/Profil/Einstellungen/Login: Sterne wirbeln herein und funkeln, Werte und Abzeichen ploppen gestaffelt, Balken wachsen, aktives Profil und „Los geht's!“ leuchten sanft
 - [x] Fehler behoben: Neuladen einer Unterseite (z. B. `/fortschritt`) landete auf der Startseite – Angular startet alle Guards einer Route gleichzeitig; jetzt wartet jeder Guard selbst auf die Token-Prüfung (`afterAuth` in `app.routes.ts`), `/wiederholen` lädt vorher den Fortschritt
 - [x] Nach „Abmelden“ geht es direkt zur Anmelde-Seite
+
+## Phase 15 – Fehler-Logging & Quiz-Absicherung
+- [x] Jeder Frontend-Fehler (JavaScript-Fehler, abgelehnte Promises, Fehler beim Zeichnen) geht über `ReportingErrorHandler` → `POST /api/logs` → als `[client]`-JSON-Zeile in `pm2 logs`, mit Gerät, Seite, Benutzer und den letzten 40 „Brotkrumen“ (Quiz-Schritte)
+- [x] Fehlgeschlagene Hintergrund-Aufrufe (Netzwerk, 5xx) werden ebenfalls gemeldet; gleiche Fehler in schneller Folge gebündelt (`repeatsSinceLastReport`)
+- [x] Server: Zugriffsprotokoll `[api]`, Fehler-Middleware `[api-error]`, `unhandledRejection`/`uncaughtException` werden geloggt
+- [x] Quiz-Wächter (jede Sekunde): hängt nach richtiger Antwort → meldet & geht weiter; Timer steht → meldet & startet neu; Kacheln gesperrt obwohl Frage offen → meldet. Zusätzlich „Weiter“-Knopf auch nach richtigen Antworten
+- [x] `QuizSession`: scheitert die Erzeugung einer Aufgabe, wird ein anderes Thema versucht; klappt nichts, endet die Runde sauber mit Ergebnis statt festzuhängen
+- [x] Nach Updates: alte Tabs, die nicht mehr vorhandene `chunk-*.js` anfordern, laden einmal automatisch neu; der Server antwortet für fehlende Dateien mit 404 statt `index.html`, `index.html` wird nie gecacht
+- [x] `trust proxy`: hinter nginx wirkt die Login-Bremse je echter Client-IP statt für alle gemeinsam

@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
+import { ClientLogger } from '../logging/client-logger';
 import { Badge } from '../progress/badges';
 import { ProgressStore } from '../progress/progress-store';
 import { TaskFactory } from '../generators/task-factory';
@@ -40,6 +41,7 @@ export class QuizSession implements OnDestroy {
   private readonly registry = inject(GENERATOR_REGISTRY);
   private readonly now = inject(QUIZ_CLOCK);
   private readonly progress = inject(ProgressStore);
+  private readonly logger = inject(ClientLogger);
 
   private rng = new Rng();
   private factory = new TaskFactory(this.registry, this.rng);
@@ -117,6 +119,14 @@ export class QuizSession implements OnDestroy {
     this._records.set([]);
     this._newBadges.set([]);
     this._remainingMs.set(settings.timer.mode === 'perRound' ? settings.timer.seconds * 1000 : null);
+    this.logger.breadcrumb('quiz:start', {
+      grade: settings.grade,
+      mode: settings.mode,
+      difficulty: settings.difficulty,
+      timer: settings.timer,
+      taskCount: settings.taskCount,
+      topics: settings.mode === 'topics' ? settings.topicIds : settings.operations,
+    });
     this.nextTask();
     if (settings.timer.mode !== 'off') {
       this.lastTick = this.now();
@@ -147,6 +157,7 @@ export class QuizSession implements OnDestroy {
     this._records.set([]);
     this._newBadges.set([]);
     this._remainingMs.set(null);
+    this.logger.breadcrumb('quiz:start-review', { tasks: this.reviewQueue.length });
     this.nextTask();
   }
 
@@ -156,12 +167,16 @@ export class QuizSession implements OnDestroy {
   }
 
   answer(index: number): void {
-    if (this._phase() !== 'question' || index < 0 || index > 2) return;
+    if (this._phase() !== 'question' || index < 0 || index > 2) {
+      this.logger.breadcrumb('quiz:answer-ignored', { index, phase: this._phase() });
+      return;
+    }
     this.record(index);
   }
 
   next(): void {
     if (this._phase() !== 'feedback') return;
+    this.logger.breadcrumb('quiz:next', { done: this._records().length });
     if (this.isRoundOver()) {
       this.finish();
     } else {
@@ -169,8 +184,19 @@ export class QuizSession implements OnDestroy {
     }
   }
 
+  /** Timer neu anstoßen, falls er (z. B. nach einem Fehler) nicht mehr läuft – für den Quiz-Wächter. */
+  resumeTimer(): void {
+    const settings = this._settings();
+    if (!settings || settings.timer.mode === 'off' || this._phase() === 'finished') return;
+    this.stopTimer();
+    this.lastTick = this.now();
+    this.interval = setInterval(() => this.tick(), TICK_MS);
+    this.logger.breadcrumb('quiz:timer-resumed');
+  }
+
   /** Runde vorzeitig beenden (Kind verlässt das Quiz). */
   abandon(): void {
+    if (this._settings()) this.logger.breadcrumb('quiz:abandon', { phase: this._phase(), done: this._records().length });
     this.stopTimer();
     this._settings.set(null);
     this._task.set(null);
@@ -184,18 +210,18 @@ export class QuizSession implements OnDestroy {
 
   private nextTask(): void {
     const settings = this._settings()!;
-    const operations = settings.mode === 'arithmetic' ? settings.operations : undefined;
     let task: Task;
-    if (settings.mode === 'review') {
-      task = this.reviewQueue.shift()!;
-    } else {
-      let tries = 0;
-      do {
-        // Themen, bei denen das Kind unsicher ist, kommen öfter dran
-        const entry = this.rng.weighted(this.pool, (e) => 1 + WEAKNESS_BOOST * this.progress.weakness(e.topic.id));
-        task = this.factory.create(entry.topic.id, entry.difficulty, operations);
-      } while (this.seenPrompts.has(task.prompt.math.value) && ++tries < REPEAT_AVOIDANCE_TRIES);
-      this.seenPrompts.add(task.prompt.math.value);
+    try {
+      task = this.createTask(settings);
+    } catch (error) {
+      const err = error as Error;
+      this.logger.report('error', `Keine Aufgabe erzeugbar: ${err.message}`, { stack: err.stack, context: { settings } });
+      // Lieber sauber mit Ergebnis beenden als in der Rückmeldung festzuhängen
+      if (this._records().length) {
+        this.finish();
+        return;
+      }
+      throw error;
     }
 
     this._task.set(task);
@@ -204,6 +230,35 @@ export class QuizSession implements OnDestroy {
     if (settings.timer.mode === 'perTask') {
       this._remainingMs.set(settings.timer.seconds * 1000);
     }
+    this.logger.breadcrumb('quiz:task', { n: this._records().length + 1, topic: task.topicId, prompt: task.prompt.math.value.slice(0, 60) });
+  }
+
+  /** Nächste Aufgabe; scheitert ein Thema (Generator-Fehler), wird ein anderes gezogen. */
+  private createTask(settings: QuizSettings): Task {
+    if (settings.mode === 'review') {
+      const task = this.reviewQueue.shift();
+      if (!task) throw new Error('Wiederholungsliste ist leer');
+      return task;
+    }
+    const operations = settings.mode === 'arithmetic' ? settings.operations : undefined;
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        let task: Task;
+        let tries = 0;
+        do {
+          // Themen, bei denen das Kind unsicher ist, kommen öfter dran
+          const entry = this.rng.weighted(this.pool, (e) => 1 + WEAKNESS_BOOST * this.progress.weakness(e.topic.id));
+          task = this.factory.create(entry.topic.id, entry.difficulty, operations);
+        } while (this.seenPrompts.has(task.prompt.math.value) && ++tries < REPEAT_AVOIDANCE_TRIES);
+        this.seenPrompts.add(task.prompt.math.value);
+        return task;
+      } catch (error) {
+        lastError = error;
+        this.logger.breadcrumb('quiz:task-failed', { attempt, message: String((error as Error)?.message).slice(0, 160) });
+      }
+    }
+    throw lastError;
   }
 
   private record(chosenIndex: number | null): void {
@@ -218,6 +273,7 @@ export class QuizSession implements OnDestroy {
       },
     ]);
     this._phase.set('feedback');
+    this.logger.breadcrumb(chosenIndex === null ? 'quiz:timeout' : 'quiz:answer', { chosen: chosenIndex, correct: chosenIndex === task.correctIndex });
   }
 
   private tick(): void {
@@ -250,6 +306,7 @@ export class QuizSession implements OnDestroy {
 
   private finish(): void {
     this.stopTimer();
+    this.logger.breadcrumb('quiz:finish', { done: this._records().length });
     const settings = this._settings();
     if (settings) {
       const answers = this._records().map((r) => ({ task: r.task, correct: r.correct }));

@@ -5,6 +5,8 @@ import { FakeApiClient } from '../testing/fake-api-client';
 import { ProgressStore } from '../progress/progress-store';
 import { QUIZ_CLOCK } from './quiz-config';
 import { QuizSession } from './quiz-session';
+import { TaskFactory } from '../generators/task-factory';
+import { ClientLogger } from '../logging/client-logger';
 
 const base: QuizSettings = {
   grade: 2,
@@ -162,6 +164,35 @@ describe('QuizSession', () => {
     expect(TestBed.inject(ProgressStore).mistakes()).toHaveLength(0);
     expect(session.newBadges().map((b) => b.id)).toContain('learned');
     expect(() => session.startReview()).toThrow();
+  });
+
+  it('finishes the round cleanly instead of hanging when no further task can be generated', () => {
+    const report = vi.spyOn(TestBed.inject(ClientLogger), 'report').mockImplementation(() => {});
+    session.start(base);
+    session.answer(session.task()!.correctIndex);
+    const create = vi.spyOn(TaskFactory.prototype, 'create').mockImplementation(() => {
+      throw new Error('Generator kaputt');
+    });
+    session.next();
+    expect(session.phase()).toBe('finished');
+    expect(session.summary().total).toBe(1);
+    expect(report).toHaveBeenCalledWith('error', expect.stringContaining('Generator kaputt'), expect.anything());
+    create.mockRestore();
+  });
+
+  it('retries another topic when a single generation fails', () => {
+    session.start(base);
+    session.answer(0);
+    const real = TaskFactory.prototype.create;
+    let calls = 0;
+    const create = vi.spyOn(TaskFactory.prototype, 'create').mockImplementation(function (this: TaskFactory, ...args) {
+      if (calls++ === 0) throw new Error('einmal kaputt');
+      return real.apply(this, args);
+    });
+    session.next();
+    expect(session.phase()).toBe('question');
+    expect(session.task()).not.toBeNull();
+    create.mockRestore();
   });
 
   it('refuses selections without tasks', () => {

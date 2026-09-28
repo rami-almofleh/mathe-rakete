@@ -1,4 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { ClientLogger } from '../logging/client-logger';
 import { TOKEN_KEY, TOKEN_STORAGE } from './token-storage';
 
 export class ApiError extends Error {
@@ -14,6 +15,7 @@ export class ApiError extends Error {
 @Injectable({ providedIn: 'root' })
 export class ApiClient {
   private readonly storage = inject(TOKEN_STORAGE);
+  private readonly logger = inject(ClientLogger);
 
   /** Zählt hoch bei jeder 401-Antwort – `AuthService` meldet das Kind dann ab. */
   readonly unauthorized = signal(0);
@@ -36,14 +38,25 @@ export class ApiClient {
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const token = this.readToken();
-    const res = await fetch(`/api${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+    const started = Date.now();
+    let res: Response;
+    try {
+      res = await fetch(`/api${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    } catch (error) {
+      // Viele Aufrufe laufen still im Hintergrund – ohne diesen Bericht bliebe ein Verbindungsproblem unsichtbar
+      this.logger.report('api', `${method} ${path} fehlgeschlagen: ${(error as Error).message}`, { context: { ms: Date.now() - started } });
+      throw error;
+    }
+    if (res.status >= 500) {
+      this.logger.report('api', `${method} ${path} → ${res.status}`, { context: { ms: Date.now() - started } });
+    }
     if (res.status === 401) {
       this.unauthorized.update((n) => n + 1);
     }

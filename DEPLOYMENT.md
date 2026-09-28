@@ -206,6 +206,29 @@ pm2 restart mathe-rakete    # harter Neustart (kurzer Ausfall)
 pm2 reload mathe-rakete     # Neustart ohne Downtime (für Updates, siehe oben)
 ```
 
+## Fehler aus dem Browser nachverfolgen
+
+Jeder Fehler im Browser (auch auf den Geräten der Kinder) wird automatisch an den Server geschickt
+und steht im pm2-Log – zusammen mit Seite, Gerät/Browser, Benutzer-ID und den letzten Quiz-Schritten
+davor („breadcrumbs“). Zeilen-Präfixe:
+
+| Präfix | Bedeutung | Log-Datei |
+|---|---|---|
+| `[client]` | Fehler oder Hänger aus dem Browser (eine JSON-Zeile) | `error.log` |
+| `[api]` | jede API-Anfrage: Methode, Pfad, Status, Dauer, Benutzer | `out.log` (5xx in `error.log`) |
+| `[api-error]` | unerwarteter Fehler in einer Server-Route, mit Stacktrace | `error.log` |
+
+`kind` in `[client]`-Zeilen: `error` (JavaScript-Fehler), `stuck` (Quiz hing fest – z. B. „Nach richtiger
+Antwort ging es nicht automatisch weiter“; der Quiz-Wächter hat es dann automatisch repariert),
+`api` (Verbindungsproblem oder Serverfehler bei einem Hintergrund-Aufruf), `chunk-reload` (Tab war
+noch von vor einem Update offen und wurde neu geladen).
+
+```bash
+pm2 logs mathe-rakete --lines 200 | grep "\[client\]"          # nur Browser-Berichte
+grep "\[client\]" /var/log/mathe-rakete/error.log | tail -20      # dasselbe direkt aus der Datei
+grep "\[client\]" /var/log/mathe-rakete/error.log | tail -1 | sed 's/^.*\[client\] //' | python3 -m json.tool   # letzten Bericht lesbar
+```
+
 ## Fehlerbehebung
 
 | Symptom | Ursache / Lösung |

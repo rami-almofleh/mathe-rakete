@@ -89,6 +89,12 @@
           @if (record.correct) {
             <div class="feedback-good">
               <i class="bi bi-emoji-laughing-fill praise-emoji" aria-hidden="true"></i> {{ praise() }}
+              <!-- geht normalerweise von selbst weiter; der Knopf ist nur die Sicherheitsleine -->
+              <div>
+                <button type="button" class="btn btn-outline-success btn-sm mt-2 next-fallback" (click)="next()">
+                  Weiter <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
           } @else {
             <div class="card feedback-bad ml-slide">

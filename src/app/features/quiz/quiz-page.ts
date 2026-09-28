@@ -1,4 +1,5 @@
 import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import { ClientLogger } from '../../core/logging/client-logger';
 import { Router } from '@angular/router';
 import { SoundService } from '../../core/progress/sound';
 import { QuizSession } from '../../core/quiz/quiz-session';
@@ -8,6 +9,9 @@ import { MathView } from '../../shared/math-view/math-view';
 const PRAISE = ['Super!', 'Richtig!', 'Klasse!', 'Toll gemacht!', 'Spitze!', 'Genau so!', 'Stark!'];
 /** Nach einer richtigen Antwort geht es automatisch weiter. */
 const AUTO_NEXT_MS = 1100;
+/** Wie oft der Quiz-Wächter prüft und ab wann etwas als „hängt“ gilt */
+const WATCHDOG_MS = 1000;
+const STUCK_MS = 3000;
 
 type ChoiceState = 'open' | 'correct' | 'wrong' | 'dimmed';
 
@@ -22,6 +26,8 @@ export class QuizPage implements OnDestroy {
   protected readonly session = inject(QuizSession);
   private readonly router = inject(Router);
   private readonly sound = inject(SoundService);
+  private readonly logger = inject(ClientLogger);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly nextButton = viewChild<ElementRef<HTMLButtonElement>>('nextButton');
 
   protected readonly task = this.session.task;
@@ -71,6 +77,62 @@ export class QuizPage implements OnDestroy {
     effect(() => this.nextButton()?.nativeElement.focus());
   }
 
+  // ---- Quiz-Wächter: erkennt Hänger, meldet sie an den Server (pm2 logs) und repariert, was geht ----
+  private readonly watchdog = setInterval(() => this.checkStuck(), WATCHDOG_MS);
+  private watch = { phase: '', since: 0, remaining: null as number | null, remainingSince: 0 };
+
+  private checkStuck(): void {
+    if (typeof document !== 'undefined' && document.hidden) return; // Hintergrund-Tabs drosselt der Browser
+    const now = Date.now();
+    const phase = this.phase();
+    if (phase !== this.watch.phase) {
+      this.watch = { ...this.watch, phase, since: now, remaining: null, remainingSince: now };
+    }
+    const record = this.lastRecord();
+    const context = () => ({
+      phase,
+      task: this.task()?.topicId,
+      prompt: this.task()?.prompt.math.value.slice(0, 60),
+      done: this.session.records().length,
+      remainingMs: this.session.remainingMs(),
+      timer: this.session.settings()?.timer,
+      stuckForMs: now - this.watch.since,
+    });
+
+    // 1) Richtig geantwortet, aber das automatische Weiter kam nicht
+    if (phase === 'feedback' && record?.correct && now - this.watch.since > AUTO_NEXT_MS + STUCK_MS) {
+      this.logger.report('stuck', 'Nach richtiger Antwort ging es nicht automatisch weiter', { context: context() });
+      this.watch.since = now;
+      this.session.next();
+      return;
+    }
+
+    if (phase !== 'question') return;
+
+    // 2) Offene Frage mit Timer, aber die Zeit läuft nicht mehr
+    const timer = this.session.settings()?.timer;
+    if (timer && timer.mode !== 'off') {
+      const remaining = this.session.remainingMs();
+      if (remaining !== this.watch.remaining) {
+        this.watch.remaining = remaining;
+        this.watch.remainingSince = now;
+      } else if ((remaining ?? 0) > 0 && now - this.watch.remainingSince > STUCK_MS) {
+        this.logger.report('stuck', 'Timer lief während einer offenen Frage nicht weiter', { context: context() });
+        this.watch.remainingSince = now;
+        this.session.resumeTimer();
+      }
+    }
+
+    // 3) Frage offen, aber die angezeigten Kacheln sind noch gesperrt → Anzeige aktualisiert sich nicht mehr
+    const disabled = this.host.nativeElement.querySelectorAll('.choice:disabled').length;
+    if (disabled > 0 && now - this.watch.since > STUCK_MS) {
+      this.logger.report('stuck', 'Antwort-Kacheln gesperrt, obwohl eine Frage offen ist (Anzeige hängt)', {
+        context: { ...context(), disabled, shownPrompt: this.host.nativeElement.querySelector('.prompt')?.textContent?.trim().slice(0, 60) },
+      });
+      this.watch.since = now;
+    }
+  }
+
   protected choiceState(index: number): ChoiceState {
     const task = this.task();
     const record = this.lastRecord();
@@ -105,6 +167,7 @@ export class QuizPage implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearInterval(this.watchdog);
     // Seite verlassen (z. B. Zurück-Taste) → Timer stoppen; ein fertiges Ergebnis bleibt erhalten
     if (this.phase() !== 'finished') {
       this.session.abandon();
