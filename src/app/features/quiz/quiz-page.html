@@ -46,7 +46,7 @@
 
     <!-- pro Aufgabe neu erzeugt, damit Karte und Antworten jedes Mal neu hereinfliegen -->
     @for (current of [t]; track current) {
-    <div class="card task-card text-center mb-4">
+    <div class="card task-card text-center mb-3">
       <div class="card-body">
         @if (t.prompt.instruction) {
           <p class="instruction mb-2">{{ t.prompt.instruction }}</p>
@@ -60,9 +60,9 @@
       </div>
     </div>
 
-    <div class="row g-3" role="group" aria-label="Antworten">
+    <div class="row g-2 g-sm-3 choices" role="group" aria-label="Antworten">
       @for (choice of t.choices; track $index) {
-        <div class="col-12 ml-pop" [class.col-md-4]="!wideChoices()" [style.--i]="$index + 2">
+        <div class="ml-pop" [class.col-4]="!wideChoices()" [class.col-12]="wideChoices()" [style.--i]="$index + 2">
           <button type="button" class="btn choice choice-{{ $index }} w-100 state-{{ choiceState($index) }}"
                   [disabled]="phase() !== 'question'" (click)="choose($index)">
             <span class="choice-key" aria-hidden="true">{{ $index + 1 }}</span>
@@ -83,7 +83,7 @@
     </div>
     }
 
-    <div class="feedback mt-4" aria-live="polite">
+    <div class="feedback mt-3" aria-live="polite">
       @if (phase() === 'feedback') {
         @if (lastRecord(); as record) {
           @if (record.correct) {

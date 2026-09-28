@@ -3,9 +3,25 @@
   box-shadow: var(--ml-shadow);
 }
 
+.app-navbar {
+  // auf dem Handy flacher, damit mehr Platz für die Aufgabe bleibt
+  @media (max-width: 575.98px) {
+    --bs-navbar-padding-y: 0.35rem;
+
+    // Buttons bleiben in einer Zeile neben dem Logo, statt umzubrechen
+    .container {
+      flex-wrap: nowrap;
+    }
+  }
+}
+
 .navbar-brand {
   font-size: 1.6rem;
   color: var(--ml-primary-dark);
+
+  @media (max-width: 575.98px) {
+    font-size: 1.3rem;
+  }
 }
 
 .brand-icon {
@@ -38,7 +54,8 @@
 }
 
 .nav-stars,
-.nav-sound {
+.nav-sound,
+.nav-logout {
   --bs-btn-padding-x: 0.75rem;
   --bs-btn-padding-y: 0.3rem;
   font-weight: 800;

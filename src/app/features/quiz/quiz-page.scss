@@ -99,6 +99,11 @@
 
 .task-card .card-body {
   padding: 2.5rem 1rem;
+
+  // Handy und iPad hochkant: Aufgabe und alle Antworten sollen ohne Scrollen sichtbar sein
+  @media (max-width: 991.98px) {
+    padding: 1.25rem 0.75rem;
+  }
 }
 
 .instruction {
@@ -128,6 +133,7 @@
   color: var(--ml-ink);
   font-size: clamp(1.5rem, 5vw, 2rem);
   font-weight: 700;
+  overflow-wrap: anywhere;
   box-shadow: 0 0.35rem 0 color-mix(in srgb, var(--choice-color) 70%, black);
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 
@@ -144,6 +150,13 @@
   &:disabled {
     opacity: 1;
     color: var(--ml-ink);
+  }
+
+  // drei Antworten nebeneinander: schmaler und flacher, damit sie in eine Zeile passen
+  @media (max-width: 575.98px) {
+    min-height: 4.5rem;
+    padding: 1.1rem 0.35rem 0.6rem;
+    font-size: clamp(1.15rem, 5.5vw, 1.6rem);
   }
 }
 
@@ -166,8 +179,8 @@
 
 .choice-key {
   position: absolute;
-  top: 0.4rem;
-  left: 0.7rem;
+  top: 0.3rem;
+  left: 0.6rem;
   font-size: 0.8rem;
   color: var(--ml-muted);
 }

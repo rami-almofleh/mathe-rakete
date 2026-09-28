@@ -8,6 +8,11 @@
     max-width: 16rem;
     height: auto;
     overflow: visible;
+
+    // auf Handy und iPad darf eine große Abbildung die Antworten nicht aus dem Bild schieben
+    @media (max-width: 991.98px) {
+      max-height: 28svh;
+    }
   }
 
   &.compact svg {

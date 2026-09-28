@@ -14,9 +14,9 @@ import { ProgressStore } from './core/progress/progress-store';
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/">
           <span class="brand-icon"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i></span>
-          <span class="display-font">Mathe-Rakete</span>
+          <span class="display-font" [class.d-none]="auth.isAuthed()" [class.d-sm-inline]="auth.isAuthed()">Mathe-Rakete</span>
         </a>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-1 gap-sm-2">
           @if (auth.isAuthed()) {
             @if (profiles.active(); as p) {
               <a class="btn btn-sm btn-outline-primary nav-profile color-{{ p.color }}" routerLink="/profil" [attr.aria-label]="'Profil wechseln (' + p.name + ')'">
@@ -57,7 +57,7 @@ import { ProgressStore } from './core/progress/progress-store';
       </div>
     </nav>
 
-    <main class="container py-4">
+    <main class="container py-3 py-md-4">
       <router-outlet />
     </main>
   `,
