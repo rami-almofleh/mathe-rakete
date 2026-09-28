@@ -1,0 +1,162 @@
+.quiz {
+  max-width: 48rem;
+}
+
+.score {
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+
+.streak {
+  font-weight: 800;
+  color: var(--ml-coral);
+  animation: pop 0.3s ease;
+}
+
+.task-progress {
+  height: 0.6rem;
+  --bs-progress-bar-bg: var(--ml-primary);
+}
+
+.timer {
+  color: var(--ml-mint);
+
+  // Bootstrap setzt die Variable direkt auf .progress – deshalb hier und nicht am Elternelement
+  .progress {
+    --bs-progress-bar-bg: var(--ml-mint);
+  }
+
+  .progress-bar {
+    transition: width 0.1s linear;
+  }
+
+  &.low {
+    color: var(--ml-coral);
+    animation: pulse 0.6s ease-in-out infinite alternate;
+
+    .progress {
+      --bs-progress-bar-bg: var(--ml-coral);
+    }
+  }
+}
+
+.timer-seconds {
+  min-width: 3rem;
+  font-weight: 800;
+  text-align: end;
+}
+
+@keyframes pulse {
+  to { transform: scale(1.03); }
+}
+
+.task-card .card-body {
+  padding: 2.5rem 1rem;
+}
+
+.instruction {
+  color: var(--ml-muted);
+  font-weight: 700;
+}
+
+.prompt {
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  color: var(--ml-ink);
+  overflow-wrap: anywhere;
+
+  // Sachaufgaben und lange Listen („Quader: a = 12 m, b = 11 m, c = 4 m“)
+  &.prompt-long {
+    font-size: clamp(1.3rem, 4.5vw, 2rem);
+  }
+}
+
+.choice {
+  --choice-color: var(--ml-sun);
+  position: relative;
+  min-height: 5.5rem;
+  padding: 1rem;
+  border: 3px solid var(--choice-color);
+  border-radius: var(--ml-radius);
+  background: color-mix(in srgb, var(--choice-color) 18%, white);
+  color: var(--ml-ink);
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 700;
+  box-shadow: 0 0.35rem 0 color-mix(in srgb, var(--choice-color) 70%, black);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--choice-color) 30%, white);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0.1rem 0 color-mix(in srgb, var(--choice-color) 70%, black);
+  }
+
+  &:disabled {
+    opacity: 1;
+    color: var(--ml-ink);
+  }
+}
+
+.choice-1 { --choice-color: var(--ml-mint); }
+.choice-2 { --choice-color: var(--ml-sky); }
+
+.state-correct {
+  --choice-color: #2fb344;
+  animation: pop 0.3s ease;
+}
+
+.state-wrong {
+  --choice-color: var(--ml-coral);
+  animation: shake 0.35s ease;
+}
+
+.state-dimmed {
+  opacity: 0.45 !important;
+}
+
+.choice-key {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--ml-muted);
+}
+
+.state-icon {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.6rem;
+  font-size: 1.3rem;
+  color: var(--choice-color);
+}
+
+@keyframes pop {
+  50% { transform: scale(1.06); }
+}
+
+@keyframes shake {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.feedback-good {
+  font-family: var(--ml-font-display);
+  font-size: 2rem;
+  text-align: center;
+  color: #2fb344;
+  animation: pop 0.3s ease;
+}
+
+.feedback-bad {
+  border-left: 0.4rem solid var(--ml-coral);
+}
+
+.explanation {
+  font-size: 1.15rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fff8e6;
+}

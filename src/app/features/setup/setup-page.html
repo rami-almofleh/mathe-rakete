@@ -1,0 +1,192 @@
+@if (gradeNumber(); as g) {
+  <div class="setup mx-auto">
+    <header class="d-flex align-items-center gap-3 mb-4">
+      <a class="btn btn-outline-primary btn-round" routerLink="/" aria-label="Zurück zur Klassenwahl">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+      </a>
+      <div>
+        <h1 class="h2 mb-0">Klasse {{ g }}</h1>
+        <div class="text-muted-kid">{{ gradeInfo()?.tagline }}</div>
+      </div>
+    </header>
+
+    <!-- 1. Was üben? -->
+    <section class="card setup-step mb-3" aria-labelledby="step-mode">
+      <div class="card-body">
+        <h2 class="h5 step-title" id="step-mode"><span class="step-number">1</span> Was möchtest du üben?</h2>
+        <div class="row g-2 mb-3" role="radiogroup" aria-labelledby="step-mode">
+          <div class="col-6">
+            <input type="radio" class="btn-check" name="mode" id="mode-arithmetic" [checked]="mode() === 'arithmetic'"
+                   [disabled]="!availableOps().length" (change)="mode.set('arithmetic')" />
+            <label class="btn btn-choice w-100" for="mode-arithmetic">
+              <i class="bi bi-calculator-fill" aria-hidden="true"></i>
+              <span class="fw-bold">Rechnen</span>
+              <small>Plus, Minus, Mal, Geteilt</small>
+            </label>
+          </div>
+          <div class="col-6">
+            <input type="radio" class="btn-check" name="mode" id="mode-topics" [checked]="mode() === 'topics'"
+                   (change)="mode.set('topics')" />
+            <label class="btn btn-choice w-100" for="mode-topics">
+              <i class="bi bi-journal-bookmark-fill" aria-hidden="true"></i>
+              <span class="fw-bold">Themen</span>
+              <small>Wie im Unterricht</small>
+            </label>
+          </div>
+        </div>
+
+        @if (mode() === 'arithmetic') {
+          <div class="d-flex flex-wrap gap-2" role="group" aria-label="Rechenarten">
+            @for (op of operationInfos; track op.id) {
+              <input type="checkbox" class="btn-check" [id]="'op-' + op.id" [checked]="operations().includes(op.id)"
+                     [disabled]="!availableOps().includes(op.id)" (change)="toggleOperation(op.id)" />
+              <label class="btn btn-op" [for]="'op-' + op.id" [attr.title]="op.label">
+                <span class="op-symbol" aria-hidden="true">{{ op.symbol }}</span>
+                <span class="small">{{ op.label }}</span>
+              </label>
+            }
+          </div>
+          @if (arithmeticPreview().length) {
+            <p class="small text-muted-kid mt-3 mb-0">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              Du übst: {{ previewTitles() }}
+              @if (fallbackGrade(); as fg) {
+                <br /><span class="text-warning-emphasis">Für Klasse {{ g }} sind die Aufgaben noch in Arbeit – bis dahin übst du Aufgaben aus Klasse {{ fg }}.</span>
+              }
+            </p>
+          } @else {
+            <p class="small text-danger mt-3 mb-0">Wähle mindestens eine Rechenart.</p>
+          }
+        } @else {
+          @for (group of topicGroups(); track group.grade) {
+            <details class="topic-group" [open]="group.grade === g">
+              <summary>
+                <span class="fw-bold">Klasse {{ group.grade }}</span>
+                <span class="badge rounded-pill text-bg-light ms-2">{{ selectedInGrade(group.grade) }} gewählt</span>
+              </summary>
+              <div class="d-flex gap-2 my-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="selectGrade(group.grade, true)">Alle</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="selectGrade(group.grade, false)">Keine</button>
+              </div>
+              <div class="row g-2">
+                @for (item of group.topics; track item.topic.id) {
+                  <div class="col-md-6">
+                    <label class="topic-option" [class.disabled]="!item.ready">
+                      <input type="checkbox" class="form-check-input" [checked]="selectedTopics().has(item.topic.id)"
+                             [disabled]="!item.ready" (change)="toggleTopic(item.topic.id)" />
+                      <span>
+                        <span class="d-block fw-bold">{{ item.topic.title }}</span>
+                        <span class="small text-muted-kid">{{ item.topic.example }}</span>
+                      </span>
+                      @if (!item.ready) {
+                        <span class="badge rounded-pill text-bg-warning ms-auto">bald</span>
+                      }
+                    </label>
+                  </div>
+                }
+              </div>
+            </details>
+          }
+          @if (!selectedTopics().size) {
+            <p class="small text-danger mt-2 mb-0">Wähle mindestens ein Thema.</p>
+          }
+        }
+      </div>
+    </section>
+
+    <!-- 2. Schwierigkeit -->
+    <section class="card setup-step mb-3" aria-labelledby="step-difficulty">
+      <div class="card-body">
+        <h2 class="h5 step-title" id="step-difficulty"><span class="step-number">2</span> Wie schwer?</h2>
+        <div class="row g-2" role="radiogroup" aria-labelledby="step-difficulty">
+          @for (d of difficulties; track d.id) {
+            <div class="col-4">
+              <input type="radio" class="btn-check" name="difficulty" [id]="'difficulty-' + d.id"
+                     [checked]="difficulty() === d.id" (change)="difficulty.set(d.id)" />
+              <label class="btn btn-choice w-100 difficulty-{{ d.id }}" [for]="'difficulty-' + d.id">
+                <i class="bi {{ d.icon }}" aria-hidden="true"></i>
+                <span class="fw-bold">{{ d.label }}</span>
+              </label>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Zeit -->
+    <section class="card setup-step mb-3" aria-labelledby="step-timer">
+      <div class="card-body">
+        <h2 class="h5 step-title" id="step-timer"><span class="step-number">3</span> Mit Zeit?</h2>
+        <div class="row g-2 mb-3" role="radiogroup" aria-labelledby="step-timer">
+          @for (t of timerModes; track t.id) {
+            <div class="col-4">
+              <input type="radio" class="btn-check" name="timer" [id]="'timer-' + t.id"
+                     [checked]="timerMode() === t.id" (change)="timerMode.set(t.id)" />
+              <label class="btn btn-choice w-100" [for]="'timer-' + t.id">
+                <i class="bi {{ t.icon }}" aria-hidden="true"></i>
+                <span class="fw-bold">{{ t.label }}</span>
+              </label>
+            </div>
+          }
+        </div>
+
+        @if (timerMode() === 'perTask') {
+          <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Sekunden pro Aufgabe">
+            @for (s of taskSecondsOptions; track s) {
+              <input type="radio" class="btn-check" name="task-seconds" [id]="'task-seconds-' + s"
+                     [checked]="taskSeconds() === s" (change)="taskSeconds.set(s)" />
+              <label class="btn btn-sm btn-outline-primary" [for]="'task-seconds-' + s">
+                {{ s }} s
+                @if (s === suggestedSeconds()) {
+                  <i class="bi bi-star-fill text-warning ms-1" aria-label="empfohlen"></i>
+                }
+              </label>
+            }
+          </div>
+          <p class="small text-muted-kid mt-2 mb-0">
+            <i class="bi bi-star-fill text-warning" aria-hidden="true"></i> empfohlen für Klasse {{ g }}
+          </p>
+        } @else if (timerMode() === 'perRound') {
+          <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Dauer der Runde">
+            @for (s of roundSecondsOptions; track s) {
+              <input type="radio" class="btn-check" name="round-seconds" [id]="'round-seconds-' + s"
+                     [checked]="roundSeconds() === s" (change)="roundSeconds.set(s)" />
+              <label class="btn btn-sm btn-outline-primary" [for]="'round-seconds-' + s">{{ formatSeconds(s) }}</label>
+            }
+          </div>
+          <p class="small text-muted-kid mt-2 mb-0">Schaffst du so viele Aufgaben wie möglich?</p>
+        }
+      </div>
+    </section>
+
+    <!-- 4. Anzahl -->
+    @if (timerMode() !== 'perRound') {
+      <section class="card setup-step mb-4" aria-labelledby="step-count">
+        <div class="card-body">
+          <h2 class="h5 step-title" id="step-count"><span class="step-number">4</span> Wie viele Aufgaben?</h2>
+          <div class="d-flex gap-2" role="radiogroup" aria-labelledby="step-count">
+            @for (n of taskCountOptions; track n) {
+              <input type="radio" class="btn-check" name="task-count" [id]="'task-count-' + n"
+                     [checked]="taskCount() === n" (change)="taskCount.set(n)" />
+              <label class="btn btn-outline-primary px-4" [for]="'task-count-' + n">{{ n }}</label>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <div class="d-grid">
+      <button type="button" class="btn btn-primary btn-lg btn-start" [disabled]="!canStart()" (click)="start()">
+        <i class="bi bi-rocket-takeoff-fill me-2" aria-hidden="true"></i>Los geht's!
+      </button>
+      <p class="small text-muted-kid text-center mt-2 mb-0">
+        <i class="bi bi-magic" aria-hidden="true"></i> Themen, die dir schwerfallen, kommen öfter dran.
+      </p>
+    </div>
+  </div>
+} @else {
+  <div class="card mx-auto text-center p-5" style="max-width: 32rem">
+    <h1 class="h3">Diese Klasse gibt es nicht</h1>
+    <a class="btn btn-primary mt-3" routerLink="/">Klasse wählen</a>
+  </div>
+}

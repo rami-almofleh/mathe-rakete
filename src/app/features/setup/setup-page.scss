@@ -1,0 +1,123 @@
+.setup {
+  max-width: 44rem;
+}
+
+.btn-round {
+  --bs-btn-padding-x: 0.9rem;
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--ml-primary);
+  color: #fff;
+  font-size: 1rem;
+}
+
+// Große Auswahl-Kacheln (Modus, Schwierigkeit, Timer)
+.btn-choice {
+  --bs-btn-border-radius: var(--ml-radius);
+  --bs-btn-border-width: 3px;
+  --bs-btn-border-color: #e6e0ff;
+  --bs-btn-hover-border-color: var(--ml-primary);
+  --bs-btn-active-bg: #efeaff;
+  --bs-btn-active-border-color: var(--ml-primary);
+  --bs-btn-active-color: var(--ml-primary-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.9rem 0.5rem;
+  background: var(--ml-surface);
+
+  .bi {
+    font-size: 1.8rem;
+  }
+
+  small {
+    font-weight: 400;
+    color: var(--ml-muted);
+  }
+}
+
+.difficulty-easy .bi { color: var(--ml-mint); }
+.difficulty-medium .bi { color: var(--ml-sky); }
+.difficulty-hard .bi { color: var(--ml-coral); }
+
+// Rechenarten
+.btn-op {
+  --bs-btn-border-radius: 1rem;
+  --bs-btn-border-width: 3px;
+  --bs-btn-border-color: #e6e0ff;
+  --bs-btn-hover-border-color: var(--ml-primary);
+  --bs-btn-active-bg: var(--ml-primary);
+  --bs-btn-active-border-color: var(--ml-primary);
+  --bs-btn-active-color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 5rem;
+  padding: 0.5rem;
+  background: var(--ml-surface);
+}
+
+.op-symbol {
+  font-family: var(--ml-font-display);
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+// Themen-Auswahl
+.topic-group {
+  border-top: 1px solid #eee;
+  padding: 0.6rem 0;
+
+  summary {
+    cursor: pointer;
+    padding: 0.2rem 0;
+  }
+}
+
+.topic-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  height: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 2px solid #eee;
+  border-radius: 0.9rem;
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: var(--ml-primary);
+    background: #f6f3ff;
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .form-check-input {
+    flex-shrink: 0;
+    width: 1.3rem;
+    height: 1.3rem;
+    margin-top: 0.1rem;
+  }
+}
+
+.btn-start {
+  --bs-btn-padding-y: 0.9rem;
+  font-size: 1.4rem;
+}

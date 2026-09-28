@@ -1,0 +1,102 @@
+// Kindgerechtes Theme auf Basis von Bootstrap 5.3 (vorkompiliertes CSS, siehe angular.json).
+// Farben werden über CSS-Variablen gesteuert, damit Komponenten sie wiederverwenden können.
+
+:root {
+  // Kontrast Weiß auf Lila ≥ 5 : 1 (WCAG AA)
+  --ml-primary: #6c4cf0;
+  --ml-primary-dark: #5534d6;
+  --ml-sun: #ffc93c;
+  --ml-coral: #ff6b6b;
+  --ml-mint: #2ec4b6;
+  --ml-sky: #4dabf7;
+  --ml-ink: #2b2d42;
+  --ml-muted: #6c6f86;
+  --ml-surface: #ffffff;
+  --ml-bg: #f4f1ff;
+
+  // Farben der Schulstufen (Startseite, Badges)
+  --ml-stage-primary: var(--ml-sun);
+  --ml-stage-lower: var(--ml-mint);
+  --ml-stage-middle: var(--ml-sky);
+  --ml-stage-upper: var(--ml-coral);
+
+  --ml-radius: 1.25rem;
+  --ml-shadow: 0 0.5rem 1.5rem rgba(76, 52, 180, 0.12);
+  --ml-font-display: 'Fredoka', 'Nunito', system-ui, sans-serif;
+
+  --bs-body-font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bs-body-color: var(--ml-ink);
+  --bs-body-bg: var(--ml-bg);
+  --bs-primary: var(--ml-primary);
+  --bs-primary-rgb: 108, 76, 240;
+  --bs-link-color: var(--ml-primary-dark);
+  --bs-link-color-rgb: 85, 52, 214;
+  --bs-link-hover-color: var(--ml-primary);
+  --bs-border-radius: 0.75rem;
+  --bs-border-radius-lg: var(--ml-radius);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 201, 60, 0.18), transparent 40%),
+    radial-gradient(circle at 90% 20%, rgba(46, 196, 182, 0.15), transparent 40%),
+    var(--ml-bg);
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4, .display-font {
+  font-family: var(--ml-font-display);
+  font-weight: 600;
+}
+
+// Buttons: rund, groß, gut zu treffen
+.btn {
+  --bs-btn-font-weight: 700;
+  --bs-btn-border-radius: 999px;
+  --bs-btn-padding-x: 1.4rem;
+  --bs-btn-padding-y: 0.6rem;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--ml-primary);
+  --bs-btn-border-color: var(--ml-primary);
+  --bs-btn-hover-bg: var(--ml-primary-dark);
+  --bs-btn-hover-border-color: var(--ml-primary-dark);
+  --bs-btn-active-bg: var(--ml-primary-dark);
+  --bs-btn-active-border-color: var(--ml-primary-dark);
+  --bs-btn-disabled-bg: var(--ml-primary);
+  --bs-btn-disabled-border-color: var(--ml-primary);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--ml-primary-dark);
+  --bs-btn-border-color: var(--ml-primary);
+  --bs-btn-hover-bg: var(--ml-primary);
+  --bs-btn-hover-border-color: var(--ml-primary);
+  --bs-btn-active-bg: var(--ml-primary-dark);
+  --bs-btn-active-border-color: var(--ml-primary-dark);
+}
+
+.card {
+  --bs-card-bg: var(--ml-surface);
+  --bs-card-border-width: 0;
+  --bs-card-border-radius: var(--ml-radius);
+  box-shadow: var(--ml-shadow);
+}
+
+.text-muted-kid {
+  color: var(--ml-muted);
+}
+
+:focus-visible {
+  outline: 3px solid var(--ml-sun);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

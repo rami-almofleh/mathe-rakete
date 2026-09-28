@@ -1,0 +1,110 @@
+.profile-page {
+  max-width: 44rem;
+}
+
+.color-primary { --profile-color: var(--ml-primary); }
+.color-sun { --profile-color: var(--ml-sun); }
+.color-mint { --profile-color: var(--ml-mint); }
+.color-sky { --profile-color: var(--ml-sky); }
+.color-coral { --profile-color: var(--ml-coral); }
+
+.profile-card {
+  position: relative;
+  border-bottom: 0.4rem solid var(--profile-color, #ddd);
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+  }
+
+  &.active {
+    outline: 3px solid var(--profile-color);
+  }
+
+  &.add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    border: 3px dashed #d7d0f0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--ml-muted);
+  }
+}
+
+.profile-choose {
+  width: 100%;
+  padding: 1.25rem 0.75rem;
+  border: 0;
+  background: none;
+  text-align: center;
+  color: var(--ml-ink);
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--profile-color, #eee);
+  color: var(--ml-ink);
+  font-size: 2rem;
+
+  .color-primary & {
+    color: #fff;
+  }
+}
+
+.avatar-sm {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.backup-card {
+  border: 2px dashed #d7d0f0;
+  box-shadow: none;
+}
+
+.profile-edit {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  --bs-btn-padding-x: 0.5rem;
+  --bs-btn-padding-y: 0.25rem;
+}
+
+.icon-option {
+  --bs-btn-border-radius: 50%;
+  --bs-btn-border-width: 3px;
+  --bs-btn-border-color: #e6e0ff;
+  --bs-btn-active-border-color: var(--ml-ink);
+  --bs-btn-active-bg: var(--profile-color);
+  --bs-btn-padding-x: 0;
+  --bs-btn-padding-y: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.color-option {
+  --bs-btn-border-radius: 50%;
+  --bs-btn-border-width: 3px;
+  --bs-btn-border-color: transparent;
+  --bs-btn-active-border-color: var(--ml-ink);
+  --bs-btn-bg: var(--profile-color);
+  --bs-btn-hover-bg: var(--profile-color);
+  --bs-btn-active-bg: var(--profile-color);
+  --bs-btn-padding-x: 0;
+  --bs-btn-padding-y: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+}

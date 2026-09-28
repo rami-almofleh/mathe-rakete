@@ -1,0 +1,66 @@
+.mascot {
+  display: inline-grid;
+  place-items: center;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  background: var(--ml-primary);
+  color: #fff;
+  font-size: 3rem;
+  box-shadow: var(--ml-shadow);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% { transform: translateY(-0.5rem); }
+}
+
+.stage-primary { --stage-color: var(--ml-stage-primary); }
+.stage-lower { --stage-color: var(--ml-stage-lower); }
+.stage-middle { --stage-color: var(--ml-stage-middle); }
+.stage-upper { --stage-color: var(--ml-stage-upper); }
+
+.stage-icon {
+  color: var(--stage-color);
+}
+
+.grade-tile {
+  color: var(--ml-ink);
+  border-bottom: 0.4rem solid var(--stage-color);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 0.75rem 2rem rgba(76, 52, 180, 0.2);
+  }
+}
+
+.grade-number {
+  display: inline-grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: 50%;
+  background: var(--stage-color);
+  // dunkle Ziffer: auf allen Stufenfarben mindestens 5 : 1 Kontrast
+  color: var(--ml-ink);
+  font-size: 1.8rem;
+}
+
+.review-banner {
+  background: #fff6db;
+  border: 2px solid var(--ml-sun);
+  border-radius: var(--ml-radius);
+}
+
+.grade-tile.mine {
+  outline: 3px solid var(--ml-primary);
+}
+
+.mine-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}

@@ -1,0 +1,78 @@
+<div class="figure" [class.compact]="compact()" role="img" [attr.aria-label]="label()">
+  @if (clock(); as c) {
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle cx="100" cy="100" r="94" class="clock-rim" />
+      <circle cx="100" cy="100" r="90" class="clock-face" />
+      @for (t of c.ticks; track $index) {
+        <line [attr.x1]="t.x1" [attr.y1]="t.y1" [attr.x2]="t.x2" [attr.y2]="t.y2" [class.tick-long]="t.long" class="tick" />
+      }
+      @for (n of c.numbers; track n.n) {
+        <text [attr.x]="n.x" [attr.y]="n.y" class="clock-number" text-anchor="middle">{{ n.n }}</text>
+      }
+      <line x1="100" y1="100" [attr.x2]="c.hour.x" [attr.y2]="c.hour.y" class="hand-hour" />
+      <line x1="100" y1="100" [attr.x2]="c.minute.x" [attr.y2]="c.minute.y" class="hand-minute" />
+      <circle cx="100" cy="100" r="5" class="hand-center" />
+    </svg>
+  } @else if (grid(); as g) {
+    <svg [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height" aria-hidden="true">
+      @for (cell of g.cells; track $index) {
+        <rect [attr.x]="cell.x" [attr.y]="cell.y" [attr.width]="g.size" [attr.height]="g.size" class="cell" />
+      }
+      @for (x of g.vertical; track $index) {
+        <line [attr.x1]="x" y1="1" [attr.x2]="x" [attr.y2]="g.height - 1" class="grid-line" />
+      }
+      @for (y of g.horizontal; track $index) {
+        <line x1="1" [attr.y1]="y" [attr.x2]="g.width - 1" [attr.y2]="y" class="grid-line" />
+      }
+    </svg>
+  } @else if (angle(); as a) {
+    <svg viewBox="0 0 240 190" aria-hidden="true">
+      @if (a.arc) {
+        <path [attr.d]="a.arc" class="angle-arc" />
+      }
+      @if (a.square) {
+        <path [attr.d]="a.square" class="angle-arc" />
+      }
+      <line [attr.x1]="a.cx" [attr.y1]="a.cy" [attr.x2]="a.ray1.x" [attr.y2]="a.ray1.y" class="ray" />
+      <line [attr.x1]="a.cx" [attr.y1]="a.cy" [attr.x2]="a.ray2.x" [attr.y2]="a.ray2.y" class="ray" />
+      <circle [attr.cx]="a.cx" [attr.cy]="a.cy" r="4" class="vertex" />
+    </svg>
+  } @else if (fraction(); as fr) {
+    @if (fr.bar; as parts) {
+      <svg viewBox="0 0 240 70" aria-hidden="true">
+        @for (p of parts; track $index) {
+          <rect [attr.x]="p.x" y="10" [attr.width]="p.w" height="50" [class.part-filled]="p.filled" class="part" />
+        }
+      </svg>
+    } @else if (fr.circle; as parts) {
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        @for (p of parts; track $index) {
+          <path [attr.d]="p.path" [class.part-filled]="p.filled" class="part" />
+        }
+      </svg>
+    }
+  } @else if (graph(); as g) {
+    <svg [attr.viewBox]="'0 0 ' + g.size + ' ' + g.size" aria-hidden="true">
+      @for (t of g.ticks; track t.t) {
+        <line [attr.x1]="t.x" [attr.y1]="g.min" [attr.x2]="t.x" [attr.y2]="g.max" class="grid-line" />
+        <line [attr.x1]="g.min" [attr.y1]="t.y" [attr.x2]="g.max" [attr.y2]="t.y" class="grid-line" />
+      }
+      <line [attr.x1]="g.min" [attr.y1]="g.origin.y" [attr.x2]="g.max" [attr.y2]="g.origin.y" class="axis" />
+      <line [attr.x1]="g.origin.x" [attr.y1]="g.min" [attr.x2]="g.origin.x" [attr.y2]="g.max" class="axis" />
+      @for (t of g.ticks; track t.t) {
+        @if (t.t !== 0 && t.t % 2 === 0) {
+          <text [attr.x]="t.x" [attr.y]="g.origin.y + 14" class="axis-label" text-anchor="middle">{{ t.t }}</text>
+          <text [attr.x]="g.origin.x - 6" [attr.y]="t.y + 4" class="axis-label" text-anchor="end">{{ t.t }}</text>
+        }
+      }
+      <text [attr.x]="g.max - 4" [attr.y]="g.origin.y - 6" class="axis-name" text-anchor="end">x</text>
+      <text [attr.x]="g.origin.x + 8" [attr.y]="g.min + 12" class="axis-name">y</text>
+      @for (l of g.lines; track $index) {
+        <line [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2" class="graph-line" />
+        @for (p of l.lattice; track $index) {
+          <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3.5" class="graph-point" />
+        }
+      }
+    </svg>
+  }
+</div>

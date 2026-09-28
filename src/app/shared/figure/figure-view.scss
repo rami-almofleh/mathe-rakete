@@ -1,0 +1,46 @@
+.figure {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+
+  svg {
+    width: 100%;
+    max-width: 16rem;
+    height: auto;
+    overflow: visible;
+  }
+
+  &.compact svg {
+    max-width: 8rem;
+  }
+}
+
+// Uhr
+.clock-rim { fill: var(--ml-primary); }
+.clock-face { fill: #fff; }
+.tick { stroke: var(--ml-muted); stroke-width: 1; }
+.tick-long { stroke: var(--ml-ink); stroke-width: 2.5; }
+.clock-number { font-family: var(--ml-font-display); font-size: 17px; font-weight: 600; fill: var(--ml-ink); }
+.hand-hour { stroke: var(--ml-ink); stroke-width: 7; stroke-linecap: round; }
+.hand-minute { stroke: var(--ml-coral); stroke-width: 4; stroke-linecap: round; }
+.hand-center { fill: var(--ml-ink); }
+
+// Gitter
+.cell { fill: color-mix(in srgb, var(--ml-mint) 55%, white); }
+.grid-line { stroke: #c9c4dc; stroke-width: 1; }
+
+// Winkel
+.ray { stroke: var(--ml-ink); stroke-width: 4; stroke-linecap: round; }
+.angle-arc { fill: none; stroke: var(--ml-coral); stroke-width: 3; }
+.vertex { fill: var(--ml-ink); }
+
+// Bruchteile
+.part { fill: #fff; stroke: var(--ml-ink); stroke-width: 2; }
+.part-filled { fill: var(--ml-sun); }
+
+// Graph
+.axis { stroke: var(--ml-ink); stroke-width: 1.5; }
+.axis-label { font-size: 10px; fill: var(--ml-muted); }
+.axis-name { font-size: 12px; font-style: italic; fill: var(--ml-ink); }
+.graph-line { stroke: var(--ml-primary); stroke-width: 3; stroke-linecap: round; }
+.graph-point { fill: var(--ml-coral); }

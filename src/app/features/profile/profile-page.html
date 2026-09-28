@@ -1,0 +1,160 @@
+<div class="profile-page mx-auto">
+  <input #fileInput type="file" accept=".json,application/json" class="visually-hidden" (change)="onFileSelected($event, fileInput)" />
+
+  @if (importPreview(); as bundle) {
+    <div class="card">
+      <div class="card-body">
+        <h1 class="h3 mb-3"><i class="bi bi-cloud-arrow-up-fill me-2" aria-hidden="true"></i>Sicherung einlesen?</h1>
+        <p>Diese Sicherung enthält:</p>
+        <ul class="list-unstyled mb-3">
+          @for (p of bundle.profiles; track p.id) {
+            <li class="d-flex align-items-center gap-2 mb-2">
+              <span class="avatar avatar-sm color-{{ p.color }}"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
+              <span class="fw-bold">{{ p.name }}</span>
+              <span class="small text-muted-kid">
+                @if (p.grade) { Klasse {{ p.grade }} · }
+                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i> {{ bundle.progress[p.id]?.totalStars ?? 0 }}
+              </span>
+            </li>
+          }
+        </ul>
+        <div class="alert alert-warning d-flex align-items-start gap-2">
+          <i class="bi bi-exclamation-triangle-fill mt-1" aria-hidden="true"></i>
+          <span>Das ersetzt <strong>alle</strong> Profile und den ganzen Fortschritt auf diesem Gerät.</span>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-warning btn-lg" (click)="confirmImport()">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Übernehmen
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-lg" (click)="cancelImport()">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+  } @else if (editing() === null) {
+    <h1 class="h2 text-center mb-4">Wer übt heute?</h1>
+    <div class="row g-3 justify-content-center">
+      @for (p of cards(); track p.id) {
+        <div class="col-6 col-md-4">
+          <div class="card profile-card h-100 color-{{ p.color }}" [class.active]="p.id === store.activeId()">
+            <button type="button" class="profile-choose" (click)="choose(p)" [attr.aria-label]="p.name + ' auswählen'">
+              <span class="avatar"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
+              <span class="fw-bold fs-5 d-block mt-2 text-truncate">{{ p.name }}</span>
+              <span class="small text-muted-kid">
+                @if (p.grade) { Klasse {{ p.grade }} · }
+                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i> {{ p.stars }}
+              </span>
+            </button>
+            <button type="button" class="btn btn-sm btn-light profile-edit" (click)="edit(p, $event)" [attr.aria-label]="p.name + ' bearbeiten'">
+              <i class="bi bi-pencil-fill" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      }
+      <div class="col-6 col-md-4">
+        <button type="button" class="card profile-card add h-100 w-100" (click)="startNew()">
+          <span class="avatar"><i class="bi bi-plus-lg" aria-hidden="true"></i></span>
+          <span class="fw-bold mt-2">Neues Kind</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card backup-card mt-4">
+      <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <div class="fw-bold"><i class="bi bi-shield-check me-1" aria-hidden="true"></i> Sichern & auf ein anderes Gerät übertragen</div>
+          <div class="small text-muted-kid">Lädt eine Datei mit allen Profilen und dem Fortschritt herunter – zum Einlesen auf einem anderen Gerät.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-primary" (click)="downloadBackup()">
+            <i class="bi bi-download me-1" aria-hidden="true"></i> Herunterladen
+          </button>
+          <button type="button" class="btn btn-outline-primary" (click)="fileInput.click()">
+            <i class="bi bi-upload me-1" aria-hidden="true"></i> Einlesen
+          </button>
+        </div>
+      </div>
+    </div>
+    @if (importError(); as err) {
+      <p class="text-danger small mt-2 mb-0">{{ err }}</p>
+    }
+  } @else {
+    <div class="card">
+      <div class="card-body">
+        <h1 class="h3 mb-4">{{ editing() === 'new' ? (store.profiles().length ? 'Neues Kind' : 'Hallo! Wie heißt du?') : 'Profil bearbeiten' }}</h1>
+
+        <div class="mb-4">
+          <label class="form-label fw-bold" for="profile-name">Name</label>
+          <input id="profile-name" class="form-control form-control-lg" type="text" [maxLength]="maxName" autocomplete="off"
+                 [value]="name()" (input)="name.set($any($event.target).value)" (keydown.enter)="save()" placeholder="z. B. Lena" />
+        </div>
+
+        <fieldset class="mb-4">
+          <legend class="form-label fw-bold fs-6">Symbol</legend>
+          <div class="d-flex flex-wrap gap-2">
+            @for (i of icons; track i) {
+              <input type="radio" class="btn-check" name="icon" [id]="'icon-' + i" [checked]="icon() === i" (change)="icon.set(i)" />
+              <label class="btn icon-option color-{{ color() }}" [for]="'icon-' + i"><i class="bi {{ i }}" aria-hidden="true"></i><span class="visually-hidden">Symbol {{ $index + 1 }}</span></label>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="mb-4">
+          <legend class="form-label fw-bold fs-6">Farbe</legend>
+          <div class="d-flex gap-2">
+            @for (c of colors; track c) {
+              <input type="radio" class="btn-check" name="color" [id]="'color-' + c" [checked]="color() === c" (change)="color.set(c)" />
+              <label class="btn color-option color-{{ c }}" [for]="'color-' + c"><span class="visually-hidden">{{ colorNames[c] }}</span></label>
+            }
+          </div>
+        </fieldset>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label fw-bold" for="profile-grade">Klasse</label>
+            <select id="profile-grade" class="form-select" [value]="grade() ?? ''" (change)="setGrade($any($event.target).value)">
+              <option value="">– noch offen –</option>
+              @for (g of grades; track g) {
+                <option [value]="g" [selected]="grade() === g">Klasse {{ g }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold" for="profile-state">Bundesland</label>
+            <select id="profile-state" class="form-select" (change)="state.set($any($event.target).value)">
+              @for (s of states; track s.id) {
+                <option [value]="s.id" [selected]="state() === s.id">{{ s.label }}</option>
+              }
+            </select>
+            <div class="form-text">Themen erscheinen in der Klasse, in der sie dort unterrichtet werden.</div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-primary btn-lg" [disabled]="!canSave()" (click)="save()">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Speichern
+          </button>
+          @if (store.profiles().length) {
+            <button type="button" class="btn btn-outline-secondary btn-lg" (click)="cancel()">Abbrechen</button>
+          }
+          @if (editing() !== 'new') {
+            <button type="button" class="btn btn-outline-danger ms-auto" (click)="remove()">
+              <i class="bi bi-trash3 me-1" aria-hidden="true"></i> Löschen
+            </button>
+          }
+        </div>
+
+        @if (editing() === 'new' && !store.profiles().length) {
+          <p class="small text-center mt-3 mb-0">
+            Schon eine Sicherung von einem anderen Gerät?
+            <button type="button" class="btn btn-link p-0 align-baseline" (click)="fileInput.click()">Datei einlesen</button>
+          </p>
+          @if (importError(); as err) {
+            <p class="text-danger small text-center mb-0">{{ err }}</p>
+          }
+        }
+
+        <p class="small text-muted-kid mt-3 mb-0"><i class="bi bi-shield-lock" aria-hidden="true"></i> Alles bleibt nur auf diesem Gerät gespeichert.</p>
+      </div>
+    </div>
+  }
+</div>

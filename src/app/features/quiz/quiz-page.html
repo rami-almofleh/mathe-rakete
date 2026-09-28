@@ -1,0 +1,111 @@
+@if (task(); as t) {
+  <div class="quiz mx-auto">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" (click)="quit()" aria-label="Quiz beenden">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+      <span class="fw-bold display-font">
+        @if (isRound()) {
+          Aufgabe {{ taskNumber() }}
+        } @else {
+          Aufgabe {{ taskNumber() }} von {{ taskCount() }}
+        }
+      </span>
+      <span class="d-flex align-items-center gap-2">
+        @if (session.currentStreak() >= 3) {
+          <span class="streak" [attr.aria-label]="session.currentStreak() + ' richtig hintereinander'">
+            <i class="bi bi-fire" aria-hidden="true"></i> {{ session.currentStreak() }}
+          </span>
+        }
+        <span class="score" aria-label="Richtige Antworten">
+          <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i> {{ session.correctCount() }}
+        </span>
+      </span>
+    </div>
+
+    @if (!isRound()) {
+      <div class="progress task-progress mb-3" role="progressbar" aria-label="Fortschritt"
+           [attr.aria-valuenow]="session.records().length" aria-valuemin="0" [attr.aria-valuemax]="taskCount()">
+        <div class="progress-bar" [style.width.%]="progressPercent()"></div>
+      </div>
+    }
+
+    @if (session.timeFraction() !== null) {
+      <div class="timer d-flex align-items-center gap-2 mb-3" [class.low]="timeLow()">
+        <i class="bi bi-stopwatch-fill" aria-hidden="true"></i>
+        <div class="progress flex-grow-1" role="progressbar" aria-label="Restzeit"
+             [attr.aria-valuenow]="remainingSeconds()" aria-valuemin="0">
+          <div class="progress-bar" [style.width.%]="session.timeFraction()! * 100"></div>
+        </div>
+        <span class="timer-seconds">{{ remainingSeconds() }} s</span>
+      </div>
+    }
+
+    <div class="card task-card text-center mb-4">
+      <div class="card-body">
+        @if (t.prompt.instruction) {
+          <p class="instruction mb-2">{{ t.prompt.instruction }}</p>
+        }
+        @if (t.prompt.figure; as figure) {
+          <app-figure [figure]="figure" />
+        }
+        <div class="prompt" [class.prompt-long]="t.prompt.math.value.length > 24 || !!t.prompt.figure">
+          <app-math [content]="t.prompt.math" [block]="true" />
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3" role="group" aria-label="Antworten">
+      @for (choice of t.choices; track $index) {
+        <div class="col-12" [class.col-md-4]="!wideChoices()">
+          <button type="button" class="btn choice choice-{{ $index }} w-100 state-{{ choiceState($index) }}"
+                  [disabled]="phase() !== 'question'" (click)="choose($index)">
+            <span class="choice-key" aria-hidden="true">{{ $index + 1 }}</span>
+            <app-math [content]="choice.display" />
+            @if (choiceState($index) === 'correct') {
+              <i class="bi bi-check-circle-fill state-icon" aria-label="richtig"></i>
+            } @else if (choiceState($index) === 'wrong') {
+              <i class="bi bi-x-circle-fill state-icon" aria-label="falsch"></i>
+            }
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="feedback mt-4" aria-live="polite">
+      @if (phase() === 'feedback') {
+        @if (lastRecord(); as record) {
+          @if (record.correct) {
+            <div class="feedback-good">
+              <i class="bi bi-emoji-laughing-fill" aria-hidden="true"></i> {{ praise() }}
+            </div>
+          } @else {
+            <div class="card feedback-bad">
+              <div class="card-body">
+                <p class="fw-bold mb-2">
+                  @if (record.chosenIndex === null) {
+                    <i class="bi bi-alarm-fill me-1" aria-hidden="true"></i> Die Zeit ist um!
+                  } @else {
+                    <i class="bi bi-lightbulb-fill me-1" aria-hidden="true"></i> Nicht ganz.
+                  }
+                  Richtig ist: <app-math [content]="t.choices[t.correctIndex].display" />
+                </p>
+                @if (t.explanation?.length) {
+                  <div class="explanation">
+                    <div class="small fw-bold text-muted-kid mb-1">So geht's:</div>
+                    @for (line of t.explanation; track $index) {
+                      <div><app-math [content]="line" /></div>
+                    }
+                  </div>
+                }
+                <button #nextButton type="button" class="btn btn-primary btn-lg mt-3" (click)="next()">
+                  Weiter <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,141 @@
+<div class="progress-page mx-auto">
+  <h1 class="h2 mb-4"><i class="bi bi-trophy-fill text-warning" aria-hidden="true"></i> Dein Fortschritt</h1>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card stat h-100"><div class="card-body text-center">
+        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+        <div class="stat-value">{{ data().totalStars }}</div>
+        <div class="stat-label">Sterne</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat h-100"><div class="card-body text-center">
+        <i class="bi bi-flag-fill text-primary" aria-hidden="true"></i>
+        <div class="stat-value">{{ data().roundsPlayed }}</div>
+        <div class="stat-label">Runden</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat h-100"><div class="card-body text-center">
+        <i class="bi bi-bullseye text-success" aria-hidden="true"></i>
+        <div class="stat-value">{{ accuracyPercent() }}</div>
+        <div class="stat-label">richtig</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat h-100"><div class="card-body text-center">
+        <i class="bi bi-fire text-danger" aria-hidden="true"></i>
+        <div class="stat-value">{{ data().bestStreak }}</div>
+        <div class="stat-label">beste Serie</div>
+      </div></div>
+    </div>
+  </div>
+
+  @if (data().mistakes.length) {
+    <div class="card review-card mb-4">
+      <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <div class="fw-bold"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> {{ data().mistakes.length }} Aufgaben zum Wiederholen</div>
+          <div class="small text-muted-kid">Was richtig gelöst wird, verschwindet von der Liste.</div>
+        </div>
+        <a class="btn btn-warning" routerLink="/wiederholen">Jetzt üben</a>
+      </div>
+    </div>
+  }
+
+  <section class="mb-4" aria-labelledby="badges-heading">
+    <h2 class="h4 mb-3" id="badges-heading">Abzeichen ({{ data().badges.length }} von {{ badges.length }})</h2>
+    <div class="row g-2">
+      @for (badge of badges; track badge.id) {
+        @let earned = progress.earnedBadges().has(badge.id);
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card badge-card h-100" [class.earned]="earned">
+            <div class="card-body text-center">
+              <div class="badge-icon">
+                <i class="bi" [class]="earned ? 'bi ' + badge.icon : 'bi bi-lock-fill'" aria-hidden="true"></i>
+              </div>
+              <div class="fw-bold mt-2">{{ badge.title }}</div>
+              <div class="small text-muted-kid">{{ badge.description }}</div>
+              <span class="visually-hidden">{{ earned ? 'verdient' : 'noch nicht verdient' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (weakTopics().length) {
+    <section class="mb-4" aria-labelledby="weak-heading">
+      <h2 class="h4 mb-2" id="weak-heading">Das übst du bald öfter</h2>
+      <p class="small text-muted-kid">Themen, bei denen du zuletzt öfter danebenlagst, kommen in deinen Runden häufiger dran.</p>
+      <div class="d-flex flex-wrap gap-2">
+        @for (t of weakTopics(); track t.id) {
+          <span class="badge rounded-pill text-bg-warning fs-6 fw-normal">{{ t.title }} (Kl. {{ t.grade }})</span>
+        }
+      </div>
+    </section>
+  }
+
+  @if (topicsByGrade().length) {
+    <section class="mb-4" aria-labelledby="topics-heading">
+      <h2 class="h4 mb-3" id="topics-heading">Geübte Themen</h2>
+      @for (group of topicsByGrade(); track group.grade) {
+        <div class="card mb-3">
+          <div class="card-body">
+            <h3 class="h6 fw-bold">Klasse {{ group.grade }}</h3>
+            @for (t of group.topics; track t.title) {
+              <div class="topic-row">
+                <div class="d-flex justify-content-between small">
+                  <span>{{ t.title }}</span>
+                  <span class="text-muted-kid">{{ t.correct }} von {{ t.answered }} richtig</span>
+                </div>
+                <div class="progress level-{{ t.level }}" role="progressbar" [attr.aria-label]="t.title" [attr.aria-valuenow]="t.percent" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-bar" [style.width.%]="t.percent">{{ t.percent }} %</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  @if (rounds().length) {
+    <section class="mb-4" aria-labelledby="rounds-heading">
+      <h2 class="h4 mb-3" id="rounds-heading">Letzte Runden</h2>
+      <div class="card">
+        <ul class="list-group list-group-flush">
+          @for (round of rounds(); track round.date) {
+            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+              <span>
+                <span class="fw-bold">Klasse {{ round.grade }}</span>
+                <span class="small text-muted-kid"> · {{ round.difficultyLabel }} · {{ round.when }}</span>
+              </span>
+              <span class="text-nowrap">
+                {{ round.correct }}/{{ round.total }}
+                @for (s of [1, 2, 3]; track s) {
+                  <i class="bi" [class.bi-star-fill]="s <= round.stars" [class.bi-star]="s > round.stars" [class.text-warning]="s <= round.stars" aria-hidden="true"></i>
+                }
+                <span class="visually-hidden">{{ round.stars }} Sterne</span>
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    </section>
+  } @else {
+    <div class="card text-center p-4 mb-4">
+      <p class="mb-3">Du hast noch keine Runde gespielt.</p>
+      <a class="btn btn-primary" routerLink="/"><i class="bi bi-rocket-takeoff-fill me-1" aria-hidden="true"></i> Los geht's</a>
+    </div>
+  }
+
+  @if (data().roundsPlayed) {
+    <div class="text-center">
+      <button type="button" class="btn btn-sm btn-outline-danger" (click)="reset()">
+        <i class="bi bi-trash3 me-1" aria-hidden="true"></i> Fortschritt zurücksetzen
+      </button>
+    </div>
+  }
+</div>

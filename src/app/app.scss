@@ -1,0 +1,69 @@
+.app-navbar {
+  background: var(--ml-surface);
+  box-shadow: var(--ml-shadow);
+}
+
+.navbar-brand {
+  font-size: 1.6rem;
+  color: var(--ml-primary-dark);
+}
+
+.brand-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--ml-primary);
+  color: #fff;
+  font-size: 1.25rem;
+}
+
+.nav-stars,
+.nav-sound {
+  --bs-btn-padding-x: 0.75rem;
+  --bs-btn-padding-y: 0.3rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nav-profile {
+  --bs-btn-padding-x: 0.35rem;
+  --bs-btn-padding-y: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 11rem;
+  font-weight: 800;
+}
+
+.nav-grade {
+  --bs-btn-padding-x: 0.6rem;
+  --bs-btn-padding-y: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 800;
+
+  .bi-chevron-down {
+    font-size: 0.7rem;
+  }
+}
+
+.nav-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: var(--profile-color, var(--ml-primary));
+  color: var(--ml-ink);
+}
+
+.color-primary { --profile-color: var(--ml-primary); .nav-avatar { color: #fff; } }
+.color-sun { --profile-color: var(--ml-sun); }
+.color-mint { --profile-color: var(--ml-mint); }
+.color-sky { --profile-color: var(--ml-sky); }
+.color-coral { --profile-color: var(--ml-coral); }

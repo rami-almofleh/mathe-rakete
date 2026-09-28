@@ -1,0 +1,63 @@
+.progress-page {
+  max-width: 52rem;
+}
+
+.stat {
+  .bi {
+    font-size: 1.5rem;
+  }
+}
+
+.stat-value {
+  font-family: var(--ml-font-display);
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--ml-muted);
+}
+
+.badge-card {
+  opacity: 0.55;
+  filter: grayscale(1);
+
+  &.earned {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+.badge-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #e9e6f5;
+  color: var(--ml-muted);
+  font-size: 1.4rem;
+
+  .earned & {
+    background: var(--ml-sun);
+    color: var(--ml-ink);
+  }
+}
+
+.topic-row + .topic-row {
+  margin-top: 0.75rem;
+}
+
+.progress {
+  height: 1.1rem;
+  font-size: 0.7rem;
+
+  &.level-great { --bs-progress-bar-bg: #2fb344; }
+  &.level-good { --bs-progress-bar-bg: var(--ml-sky); }
+  &.level-practice { --bs-progress-bar-bg: var(--ml-sun); }
+}
+
+.review-card {
+  border: 3px solid var(--ml-sun);
+}
