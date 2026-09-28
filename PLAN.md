@@ -217,3 +217,12 @@ selben Projekt (kein Datei-Export/Import). **Wichtig:** Es gibt keine automatisc
       Build, pm2 (`ecosystem.config.cjs`), nginx/Caddy-Reverse-Proxy-Beispiel, Update-Ablauf mit
       Datenbank-Backup **vor** jedem `git pull`
 
+
+## Phase 14 – Animationen & Anmelde-Feinschliff
+- [x] Anmeldung bleibt 365 Tage gültig (`JWT_EXPIRES_IN`), und jeder App-Start holt über `/api/auth/me` automatisch einen frischen Token – wer die App mindestens einmal im Jahr öffnet, wird nie abgemeldet
+- [x] Gemeinsame Animations-Bausteine in `styles.scss` (`ml-pop`, `ml-slide`, `ml-bump`, Wackeln, Hüpfen, Funkeln, Leuchten), gestaffelt über `--i`; bei „weniger Bewegung“ im System praktisch aus
+- [x] Seitenwechsel gleiten herein; Startseite: Rakete mit funkelnden Sternen, Klassen-Kacheln ploppen nacheinander auf und hüpfen beim Drüberfahren
+- [x] Quiz: jede Aufgabe fliegt neu herein, Antworten ploppen nacheinander auf, bei „richtig“ hüpft der Knopf und Sterne fliegen heraus, Zähler hüpfen bei Änderung, Serien-Flamme flackert
+- [x] Ergebnis/Fortschritt/Profil/Einstellungen/Login: Sterne wirbeln herein und funkeln, Werte und Abzeichen ploppen gestaffelt, Balken wachsen, aktives Profil und „Los geht's!“ leuchten sanft
+- [x] Fehler behoben: Neuladen einer Unterseite (z. B. `/fortschritt`) landete auf der Startseite – Angular startet alle Guards einer Route gleichzeitig; jetzt wartet jeder Guard selbst auf die Token-Prüfung (`afterAuth` in `app.routes.ts`), `/wiederholen` lädt vorher den Fortschritt
+- [x] Nach „Abmelden“ geht es direkt zur Anmelde-Seite

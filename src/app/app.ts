@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
 import { ProfileStore } from './core/progress/profile-store';
 import { ProgressStore } from './core/progress/progress-store';
@@ -45,7 +45,7 @@ import { ProgressStore } from './core/progress/progress-store';
                 <i class="bi" [class.bi-volume-up-fill]="progress.sound()" [class.bi-volume-mute-fill]="!progress.sound()" aria-hidden="true"></i>
               </button>
             }
-            <button type="button" class="btn btn-sm btn-outline-secondary nav-logout" aria-label="Abmelden" (click)="auth.logout()">
+            <button type="button" class="btn btn-sm btn-outline-secondary nav-logout" aria-label="Abmelden" (click)="logout()">
               <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
               <span class="d-none d-sm-inline">Abmelden</span>
             </button>
@@ -65,4 +65,10 @@ export class App {
   protected readonly auth = inject(AuthService);
   protected readonly progress = inject(ProgressStore);
   protected readonly profiles = inject(ProfileStore);
+  private readonly router = inject(Router);
+
+  protected logout(): void {
+    this.auth.logout();
+    void this.router.navigate(['/login']);
+  }
 }
