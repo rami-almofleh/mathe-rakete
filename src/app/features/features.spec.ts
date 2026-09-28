@@ -3,6 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { ApiClient } from '../core/auth/api-client';
 import { FakeApiClient } from '../core/testing/fake-api-client';
 import { QuizSession } from '../core/quiz/quiz-session';
+import { ClientLogger } from '../core/logging/client-logger';
 import { HomePage } from './home/home-page';
 import { QuizPage } from './quiz/quiz-page';
 import { ResultPage } from './result/result-page';
@@ -89,6 +90,28 @@ describe('QuizPage', () => {
     expect(el.querySelector('.prompt')?.textContent).toContain('=');
     expect(el.querySelectorAll('.choice').length).toBe(3);
     expect(el.textContent).toContain('Aufgabe 1 von 3');
+  });
+
+  it('raises no false stuck alarm for quick consecutive correct answers', async () => {
+    vi.useFakeTimers();
+    try {
+      const report = vi.spyOn(TestBed.inject(ClientLogger), 'report').mockImplementation(() => {});
+      const session = TestBed.inject(QuizSession);
+      session.start({ grade: 2, mode: 'arithmetic', operations: ['mul'], topicIds: [], difficulty: 'easy', timer: { mode: 'off' }, taskCount: 8 });
+      const fixture = TestBed.createComponent(QuizPage);
+      fixture.detectChanges();
+      for (let i = 0; i < 7; i++) {
+        session.answer(session.task()!.correctIndex);
+        fixture.detectChanges();
+        await vi.advanceTimersByTimeAsync(1150); // automatisches Weiter nach 1,1 s
+        fixture.detectChanges();
+      }
+      expect(report).not.toHaveBeenCalledWith('stuck', expect.anything(), expect.anything());
+      expect(session.records()).toHaveLength(7);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('answers with the number keys and explains mistakes', async () => {

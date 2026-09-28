@@ -77,14 +77,18 @@ export class QuizPage implements OnDestroy {
 
   // ---- Quiz-Wächter: erkennt Hänger, meldet sie an den Server (pm2 logs) und repariert, was geht ----
   private readonly watchdog = setInterval(() => this.checkStuck(), WATCHDOG_MS);
-  private watch = { phase: '', since: 0, remaining: null as number | null, remainingSince: 0 };
+  private watch = { key: '', since: 0, remaining: null as number | null, remainingSince: 0 };
 
   private checkStuck(): void {
     if (typeof document !== 'undefined' && document.hidden) return; // Hintergrund-Tabs drosselt der Browser
     const now = Date.now();
     const phase = this.phase();
-    if (phase !== this.watch.phase) {
-      this.watch = { ...this.watch, phase, since: now, remaining: null, remainingSince: now };
+    // Phase allein reicht nicht: Zwei schnelle richtige Antworten hintereinander sähen bei sekündlicher
+    // Prüfung wie eine einzige, lange Rückmeldung aus (Fehlalarm). Mit der Anzahl beantworteter
+    // Aufgaben ist jede Rückmeldung und jede Frage ein eigener Zustand.
+    const key = `${phase}:${this.session.records().length}`;
+    if (key !== this.watch.key) {
+      this.watch = { ...this.watch, key, since: now, remaining: null, remainingSince: now };
     }
     const record = this.lastRecord();
     const context = () => ({
