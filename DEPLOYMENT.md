@@ -33,29 +33,21 @@ cd /var/www/mathe-rakete
 nvm use
 ```
 
-### 2. SSL-Zertifikat für die Domain erstellen
-
-nginx/Caddy laufen schon auf dem Server, aber **diese App** braucht noch ein eigenes Zertifikat für
-ihre Domain (falls die Domain neu ist bzw. noch kein Zertifikat dafür existiert).
-
-**Mit nginx (Certbot):**
-```bash
-sudo apt install certbot python3-certbot-nginx   # falls noch nicht installiert
-sudo certbot --nginx -d mathe-rakete.beispiel.de
-```
-Certbot trägt die SSL-Konfiguration selbst in den nginx-Server-Block ein und richtet die
-automatische Verlängerung ein (Cronjob/Systemd-Timer, je nach Distribution schon vorhanden).
-
-**Mit Caddy:**
-Caddy holt und erneuert Zertifikate automatisch, sobald in der `Caddyfile` ein Server-Block mit der
-Domain existiert (siehe Reverse-Proxy-Beispiel unten) – kein separater Schritt nötig.
-
-### 3. Umgebungsvariablen für die Produktion anlegen
+### 2. Umgebungsvariablen für die Produktion anlegen
 
 ```bash
 cd /var/www/mathe-rakete/server
 cp .env.example .env.production
 ```
+
+Vorher kurz prüfen, ob Port 3000 auf diesem Server überhaupt frei ist – auf einem Server mit
+mehreren Apps (z. B. per pm2) ist er das oft nicht:
+```bash
+sudo ss -tlnp | grep :3000
+```
+Kommt da eine Zeile zurück (ein Prozess lauscht schon auf dem Port), einfach einen anderen freien
+Port wählen (z. B. 3001, 3002, …) – unten bei `PORT` eintragen und später beim `proxy_pass` im
+Reverse-Proxy (Schritt 4) denselben Port verwenden.
 
 `.env.production` bearbeiten und ausfüllen:
 
@@ -79,7 +71,14 @@ sudo mkdir -p /var/lib/mathe-rakete
 sudo chown "$USER" /var/lib/mathe-rakete
 ```
 
-### 4. Bauen und starten
+Ordner für die pm2-Logs anlegen (`ecosystem.config.cjs` schreibt nach `/var/log/mathe-rakete/` –
+dieser Ordner gehört sonst `root` und der eigene Nutzer darf ihn nicht selbst anlegen):
+```bash
+sudo mkdir -p /var/log/mathe-rakete
+sudo chown "$USER" /var/log/mathe-rakete
+```
+
+### 3. Bauen und starten
 
 ```bash
 cd /var/www/mathe-rakete
@@ -87,22 +86,33 @@ npm install                # installiert auch server/ (postinstall-Skript)
 npm run build:all          # baut Angular (dist/math-learning) und den Server (server/dist)
 pm2 start ecosystem.config.cjs --env production
 pm2 save                   # merkt sich den Prozess für den nächsten Server-Neustart
-pm2 startup                # gibt einen Befehl aus, der pm2 selbst beim Booten startet – ausführen!
+pm2 startup                # gibt einen Befehl aus – den ausgegebenen Befehl kopieren und separat ausführen!
+```
+`pm2 startup` startet noch nichts von selbst – es gibt nur einen fertigen `sudo env PATH=...`-Befehl
+aus, der zu **eurem** System passt (Pfade, Nutzername). Diesen ausgegebenen Befehl 1:1 kopieren und
+ausführen, erst dann startet pm2 nach einem Server-Neustart automatisch mit.
+
+Danach prüfen, ob der Prozess wirklich läuft – und zwar nicht nur direkt nach dem Start, sondern
+auch noch nach ein paar Sekunden, um einen Absturz-Loop auszuschließen (steigt `↺` immer weiter,
+crasht die App ständig neu – meist, weil der Port doch nicht frei war, siehe Schritt 2):
+```bash
+pm2 status                 # mathe-rakete sollte "online" sein, nicht "errored" oder "stopped"
+sleep 15 && pm2 status      # ↺ sollte sich gegenüber eben NICHT erhöht haben
 ```
 
-Läuft die App, zeigt `pm2 status` den Prozess `mathe-rakete` als `online`.
+### 4. Reverse-Proxy einrichten (erst ohne SSL)
 
-### 5. Reverse-Proxy einrichten
-
-Die Domain muss auf `127.0.0.1:3000` (den pm2-Prozess) weiterleiten.
+Die Domain muss auf `127.0.0.1:<euer PORT>` (Standard 3000, oder der Port aus Schritt 2, falls 3000
+belegt war) weiterleiten. Bei nginx zuerst **nur** einen
+HTTP-Server-Block anlegen – Certbot braucht diesen Block im nächsten Schritt, um die Domain zu
+erkennen und die SSL-Zeilen selbst zu ergänzen. Ihn also noch nicht von Hand mit `listen 443 ssl`
+schreiben.
 
 **nginx** (Server-Block, z. B. `/etc/nginx/sites-available/mathe-rakete`):
 ```nginx
 server {
-    listen 443 ssl;
+    listen 80;
     server_name mathe-rakete.beispiel.de;
-
-    # Von Certbot in Schritt 2 ergänzt: ssl_certificate / ssl_certificate_key
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -112,17 +122,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-server {
-    listen 80;
-    server_name mathe-rakete.beispiel.de;
-    return 301 https://$host$request_uri;
-}
 ```
 Aktivieren und neu laden:
 ```bash
 sudo ln -s /etc/nginx/sites-available/mathe-rakete /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
+Zur Probe (noch ohne SSL): `http://mathe-rakete.beispiel.de` sollte jetzt schon die App zeigen.
 
 **Caddy** (`Caddyfile`):
 ```caddyfile
@@ -132,7 +138,30 @@ mathe-rakete.beispiel.de {
 ```
 Neu laden: `sudo systemctl reload caddy`
 
+Caddy holt sich beim Neuladen automatisch ein Zertifikat für die Domain und schaltet direkt auf
+HTTPS um – **für Caddy ist Schritt 5 damit bereits erledigt**, dort weiter mit Schritt 6.
+
+### 5. SSL-Zertifikat holen (nur nginx – bei Caddy schon erledigt)
+
+Erst jetzt, nachdem der Server-Block aus Schritt 4 existiert und aktiv ist, kann Certbot die Domain
+finden und den Block automatisch um die SSL-Konfiguration ergänzen:
+```bash
+sudo apt install certbot python3-certbot-nginx   # falls noch nicht installiert
+sudo certbot --nginx -d mathe-rakete.beispiel.de
+```
+Certbot trägt `ssl_certificate`/`ssl_certificate_key` selbst in den Server-Block ein, ergänzt einen
+zweiten Block für die Weiterleitung von Port 80 auf 443 und richtet die automatische Verlängerung
+ein (Cronjob/Systemd-Timer, je nach Distribution schon vorhanden).
+
 Danach ist die App unter `https://mathe-rakete.beispiel.de` erreichbar.
+
+### 6. Fertig prüfen
+
+```bash
+pm2 status                                          # mathe-rakete sollte "online" sein
+curl -I https://mathe-rakete.beispiel.de/api/auth/me # 401 ist hier normal (kein Token mitgeschickt)
+```
+Im Browser die Domain öffnen: Es sollte die Anmelde-Seite erscheinen.
 
 ## Aktualisieren (jedes spätere Deployment)
 
@@ -182,7 +211,8 @@ pm2 reload mathe-rakete     # Neustart ohne Downtime (für Updates, siehe oben)
 | Symptom | Ursache / Lösung |
 |---|---|
 | `pm2 status` zeigt `errored` | `pm2 logs mathe-rakete --lines 50` prüfen. Meist eine fehlende/falsche Variable in `server/.env.production` (siehe Fehlermeldung „Fehlende Pflicht-Umgebungsvariable …“). |
-| 502 Bad Gateway vom Reverse-Proxy | Der Node-Prozess läuft nicht oder nicht auf Port 3000 (`PORT` in `.env.production` prüfen, `pm2 status`). |
+| 502 Bad Gateway vom Reverse-Proxy | Der Node-Prozess läuft nicht oder nicht auf dem im `proxy_pass` erwarteten Port (`PORT` in `.env.production` mit dem `proxy_pass`-Port abgleichen, `pm2 status`). |
+| `pm2 status` zeigt `↺` (Neustarts), die immer weiter steigen, oft mit 100% CPU | Meist ein Port-Konflikt: ein anderer Prozess (eigene App oder fremd) hält den konfigurierten Port schon. Prüfen mit `sudo ss -tlnp \| grep :<PORT>` – zeigt eine fremde PID, `PORT` in `.env.production` auf einen freien Port ändern, `pm2 restart mathe-rakete --update-env`, `proxy_pass` im Reverse-Proxy entsprechend anpassen. |
 | Seite lädt, aber ein Neuladen auf einer Unterseite (z. B. `/fortschritt`) zeigt 404 | `dist/math-learning/browser` fehlt oder ist veraltet → `npm run build:all` erneut ausführen. |
 | Kinder werden nach einem Update plötzlich abgemeldet | `JWT_SECRET` wurde geändert – alle bestehenden Anmeldungen (Tokens) werden damit ungültig. `JWT_SECRET` nach dem ersten Einrichten nicht mehr ändern. |
 | Datenbank-Datei wächst unerwartet oder wirkt beschädigt | Mit der letzten Sicherung unter `/var/lib/mathe-rakete/backup-*.sqlite` wiederherstellen: `pm2 stop mathe-rakete`, Backup-Datei auf `prod.sqlite` kopieren, `pm2 start mathe-rakete`. |
