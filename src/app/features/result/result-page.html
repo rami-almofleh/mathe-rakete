@@ -8,28 +8,28 @@
       <div class="stars mb-3" [attr.aria-label]="summary().stars + ' von 3 Sternen'" role="img">
         @for (slot of starSlots; track slot) {
           <i class="bi" [class.bi-star-fill]="slot <= summary().stars" [class.bi-star]="slot > summary().stars"
-             [class.earned]="slot <= summary().stars" [style.animation-delay.ms]="slot * 200" aria-hidden="true"></i>
+             [class.earned]="slot <= summary().stars" [style.--d]="slot * 200" aria-hidden="true"></i>
         }
       </div>
-      <h1 class="display-6">{{ headline() }}</h1>
+      <h1 class="display-6 headline">{{ headline() }}</h1>
       @if (isReview()) {
         <p class="text-muted-kid mb-0"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Wiederholungsrunde</p>
       }
 
       <div class="row g-3 mt-3 justify-content-center">
-        <div class="col-4 col-md-3">
+        <div class="col-4 col-md-3 ml-pop" style="--i: 8">
           <div class="stat">
             <div class="stat-value">{{ summary().correct }}/{{ summary().total }}</div>
             <div class="stat-label">richtig</div>
           </div>
         </div>
-        <div class="col-4 col-md-3">
+        <div class="col-4 col-md-3 ml-pop" style="--i: 9">
           <div class="stat">
             <div class="stat-value">{{ accuracyPercent() }} %</div>
             <div class="stat-label">Quote</div>
           </div>
         </div>
-        <div class="col-4 col-md-3">
+        <div class="col-4 col-md-3 ml-pop" style="--i: 10">
           <div class="stat">
             <div class="stat-value">{{ duration() }}</div>
             <div class="stat-label">{{ isRound() ? 'Rechenzeit' : 'Zeit' }}</div>
@@ -37,7 +37,7 @@
         </div>
       </div>
 
-      <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+      <div class="d-flex flex-wrap justify-content-center gap-2 mt-4 ml-slide" style="--i: 12">
         <button type="button" class="btn btn-primary btn-lg" (click)="playAgain()">
           <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i> Nochmal
         </button>
@@ -59,12 +59,12 @@
   </section>
 
   @if (newBadges().length) {
-    <section class="card new-badges mb-4" aria-labelledby="badges-title">
+    <section class="card new-badges mb-4 ml-pop" style="--i: 14" aria-labelledby="badges-title">
       <div class="card-body">
         <h2 class="h5 mb-3" id="badges-title"><i class="bi bi-award-fill text-warning" aria-hidden="true"></i> Neues Abzeichen!</h2>
         <div class="d-flex flex-wrap gap-3">
           @for (badge of newBadges(); track badge.id) {
-            <div class="badge-tile">
+            <div class="badge-tile ml-pop" [style.--i]="$index + 16">
               <i class="bi {{ badge.icon }}" aria-hidden="true"></i>
               <div>
                 <div class="fw-bold">{{ badge.title }}</div>
@@ -81,7 +81,7 @@
     <section aria-labelledby="mistakes-title">
       <h2 class="h4 mb-3" id="mistakes-title"><i class="bi bi-lightbulb-fill text-warning" aria-hidden="true"></i> Das üben wir nochmal</h2>
       @for (m of summary().mistakes; track m.task.id) {
-        <div class="card mistake mb-3">
+        <div class="card mistake mb-3 ml-slide" [style.--i]="$index + 14">
           <div class="card-body">
             <div class="small text-muted-kid mb-1">{{ topicTitle(m.task.topicId) }}</div>
             @if (m.task.prompt.instruction) {
@@ -119,6 +119,6 @@
       }
     </section>
   } @else if (summary().total) {
-    <p class="text-center fs-5"><i class="bi bi-trophy-fill text-warning" aria-hidden="true"></i> Keine einzige falsche Antwort!</p>
+    <p class="text-center fs-5"><i class="bi bi-trophy-fill text-warning trophy" aria-hidden="true"></i> Keine einzige falsche Antwort!</p>
   }
 </div>

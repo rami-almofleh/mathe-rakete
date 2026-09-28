@@ -2,7 +2,7 @@
   <div class="card">
     <div class="card-body">
       <h1 class="h3 mb-1 text-center">
-        <i class="bi bi-rocket-takeoff-fill text-primary" aria-hidden="true"></i>
+        <i class="bi bi-rocket-takeoff-fill text-primary login-rocket" aria-hidden="true"></i>
         Mathe-Rakete
       </h1>
       <p class="text-center text-muted-kid mb-4">{{ mode() === 'login' ? 'Schön, dass du wieder da bist!' : 'Leg dein Konto an' }}</p>
@@ -22,7 +22,7 @@
         </div>
 
         @if (error(); as message) {
-          <div class="alert alert-danger" role="alert">{{ message }}</div>
+          <div class="alert alert-danger login-error" role="alert">{{ message }}</div>
         }
 
         <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="busy()">

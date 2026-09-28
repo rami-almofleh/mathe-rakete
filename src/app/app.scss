@@ -17,6 +17,24 @@
   background: var(--ml-primary);
   color: #fff;
   font-size: 1.25rem;
+  transition: transform 0.3s ease;
+
+  .navbar-brand:hover & {
+    animation: ml-wiggle 0.6s ease;
+  }
+}
+
+.nav-star-icon {
+  display: inline-block;
+  animation: ml-twinkle 2.4s ease-in-out infinite;
+}
+
+.nav-avatar {
+  transition: transform 0.2s ease;
+
+  .nav-profile:hover & {
+    transform: rotate(-12deg) scale(1.1);
+  }
 }
 
 .nav-stars,

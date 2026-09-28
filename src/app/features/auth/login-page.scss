@@ -2,3 +2,17 @@
   max-width: 26rem;
   margin-top: 2rem;
 }
+
+.login-rocket {
+  display: inline-block;
+  animation: ml-float 3s ease-in-out infinite;
+}
+
+.login-error {
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}

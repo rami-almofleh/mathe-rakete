@@ -18,7 +18,10 @@
           </span>
         }
         <span class="score" aria-label="Richtige Antworten">
-          <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i> {{ session.correctCount() }}
+          <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+          @for (c of [session.correctCount()]; track c) {
+            <span class="ml-bump">{{ c }}</span>
+          }
         </span>
       </span>
     </div>
@@ -41,6 +44,8 @@
       </div>
     }
 
+    <!-- pro Aufgabe neu erzeugt, damit Karte und Antworten jedes Mal neu hereinfliegen -->
+    @for (current of [t]; track current) {
     <div class="card task-card text-center mb-4">
       <div class="card-body">
         @if (t.prompt.instruction) {
@@ -57,13 +62,18 @@
 
     <div class="row g-3" role="group" aria-label="Antworten">
       @for (choice of t.choices; track $index) {
-        <div class="col-12" [class.col-md-4]="!wideChoices()">
+        <div class="col-12 ml-pop" [class.col-md-4]="!wideChoices()" [style.--i]="$index + 2">
           <button type="button" class="btn choice choice-{{ $index }} w-100 state-{{ choiceState($index) }}"
                   [disabled]="phase() !== 'question'" (click)="choose($index)">
             <span class="choice-key" aria-hidden="true">{{ $index + 1 }}</span>
             <app-math [content]="choice.display" />
             @if (choiceState($index) === 'correct') {
               <i class="bi bi-check-circle-fill state-icon" aria-label="richtig"></i>
+              <span class="burst" aria-hidden="true">
+                @for (n of burst; track n) {
+                  <i class="bi bi-star-fill" [style.--n]="n"></i>
+                }
+              </span>
             } @else if (choiceState($index) === 'wrong') {
               <i class="bi bi-x-circle-fill state-icon" aria-label="falsch"></i>
             }
@@ -71,16 +81,17 @@
         </div>
       }
     </div>
+    }
 
     <div class="feedback mt-4" aria-live="polite">
       @if (phase() === 'feedback') {
         @if (lastRecord(); as record) {
           @if (record.correct) {
             <div class="feedback-good">
-              <i class="bi bi-emoji-laughing-fill" aria-hidden="true"></i> {{ praise() }}
+              <i class="bi bi-emoji-laughing-fill praise-emoji" aria-hidden="true"></i> {{ praise() }}
             </div>
           } @else {
-            <div class="card feedback-bad">
+            <div class="card feedback-bad ml-slide">
               <div class="card-body">
                 <p class="fw-bold mb-2">
                   @if (record.chosenIndex === null) {

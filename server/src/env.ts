@@ -27,7 +27,7 @@ export const env = {
   // In der Entwicklung ein fester Wert, damit `npm run dev` ohne Einrichtung läuft.
   // In Produktion wird ein echtes Secret verlangt.
   jwtSecret: isProd ? required('JWT_SECRET') : (process.env.JWT_SECRET ?? 'dev-only-insecure-secret'),
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '90d',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '365d',
   databasePath: isProd
     ? required('DATABASE_PATH')
     : nodeEnv === 'test'

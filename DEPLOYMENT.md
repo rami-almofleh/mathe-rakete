@@ -55,7 +55,7 @@ Reverse-Proxy (Schritt 4) denselben Port verwenden.
 NODE_ENV=production
 PORT=3000
 JWT_SECRET=<hier einfügen>
-JWT_EXPIRES_IN=90d
+JWT_EXPIRES_IN=365d
 DATABASE_PATH=/var/lib/mathe-rakete/prod.sqlite
 ```
 

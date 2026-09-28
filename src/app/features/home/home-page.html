@@ -1,5 +1,10 @@
 <section class="hero text-center mb-5">
-  <div class="mascot" aria-hidden="true"><i class="bi bi-rocket-takeoff-fill"></i></div>
+  <div class="mascot" aria-hidden="true">
+    <i class="bi bi-rocket-takeoff-fill"></i>
+    <i class="bi bi-star-fill sparkle sparkle-1"></i>
+    <i class="bi bi-star-fill sparkle sparkle-2"></i>
+    <i class="bi bi-stars sparkle sparkle-3"></i>
+  </div>
   @if (profile()?.grade; as myGrade) {
     <h1 class="display-5 mt-3">Hallo {{ profile()!.name }}!</h1>
     <p class="lead text-muted-kid">Bereit für Klasse {{ myGrade }}? Oder wähle eine andere Klasse.</p>
@@ -13,13 +18,13 @@
 </section>
 
 @if (mistakes().length) {
-  <div class="alert review-banner d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" role="status">
+  <div class="alert review-banner ml-slide d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" role="status">
     <span><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i> Du hast <strong>{{ mistakes().length }}</strong> Aufgaben zum Wiederholen.</span>
     <a class="btn btn-warning btn-sm" routerLink="/wiederholen">Fehler üben</a>
   </div>
 }
 
-@for (stage of stages; track stage.id) {
+@for (stage of stages; track stage.id; let s = $index) {
   <section class="mb-4 stage stage-{{ stage.id }}" [attr.aria-labelledby]="'stage-' + stage.id">
     <h2 class="h4 d-flex align-items-center gap-2 mb-3" [id]="'stage-' + stage.id">
       <i class="bi {{ stage.icon }} stage-icon" aria-hidden="true"></i>
@@ -27,7 +32,7 @@
     </h2>
     <div class="row g-3">
       @for (grade of stage.grades; track grade) {
-        <div class="col-6 col-md-4 col-lg-3">
+        <div class="col-6 col-md-4 col-lg-3 ml-pop" [style.--i]="s * 3 + $index">
           <a class="grade-tile card h-100 text-decoration-none" [class.mine]="profile()?.grade === grade" [routerLink]="['/klasse', grade]">
             <div class="card-body text-center">
               @if (profile()?.grade === grade) {

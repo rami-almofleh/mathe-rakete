@@ -29,8 +29,11 @@ import { ProgressStore } from './core/progress/progress-store';
                 </a>
               }
               <a class="btn btn-sm btn-outline-primary nav-stars" routerLink="/fortschritt" aria-label="Mein Fortschritt">
-                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                <span>{{ progress.data().totalStars }}</span>
+                <i class="bi bi-star-fill text-warning nav-star-icon" aria-hidden="true"></i>
+                <!-- neu erzeugt bei jeder Änderung → hüpft, wenn Sterne dazukommen -->
+                @for (stars of [progress.data().totalStars]; track stars) {
+                  <span class="ml-bump">{{ stars }}</span>
+                }
               </a>
               <button
                 type="button"

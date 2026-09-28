@@ -21,7 +21,11 @@ describe('auth routes', () => {
 
     const me = await server.request('/api/auth/me', { headers: authHeader(body.token) });
     assert.equal(me.status, 200);
-    assert.deepEqual(((await me.json()) as { user: unknown }).user, body.user);
+    const meBody = (await me.json()) as { user: unknown; token: string };
+    assert.deepEqual(meBody.user, body.user);
+    // gleitende Verlängerung: /me liefert einen neuen, gültigen Token
+    const renewed = await server.request('/api/auth/me', { headers: authHeader(meBody.token) });
+    assert.equal(renewed.status, 200);
   });
 
   it('normalizes email casing/whitespace so the same address cannot register twice', async () => {

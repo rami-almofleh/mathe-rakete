@@ -59,7 +59,8 @@ export class AuthService {
   private async bootstrapOnce(): Promise<void> {
     if (this.readToken()) {
       try {
-        const res = await this.api.get<{ user: AuthUser }>('/auth/me');
+        const res = await this.api.get<{ user: AuthUser; token?: string }>('/auth/me');
+        if (res.token) this.writeToken(res.token);
         this._user.set(res.user);
         await this.profiles.hydrate();
       } catch {

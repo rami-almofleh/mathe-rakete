@@ -50,11 +50,13 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
   res.json({ token: signToken({ sub: row.id, email: row.email }), user: { id: row.id, email: row.email } });
 });
 
+// Gibt bei jedem App-Start einen frischen Token mit – gleitende Verlängerung: Wer die App
+// innerhalb der Laufzeit (JWT_EXPIRES_IN) wieder öffnet, wird nie abgemeldet.
 authRouter.get('/me', requireAuth, (req, res) => {
-  const row = db.prepare('SELECT id, email FROM users WHERE id = ?').get(req.userId!);
+  const row = db.prepare('SELECT id, email FROM users WHERE id = ?').get(req.userId!) as { id: number; email: string } | undefined;
   if (!row) {
     res.status(404).json({ error: 'not_found' });
     return;
   }
-  res.json({ user: row });
+  res.json({ user: row, token: signToken({ sub: row.id, email: row.email }) });
 });

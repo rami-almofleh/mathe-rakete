@@ -94,9 +94,85 @@ h1, h2, h3, h4, .display-font {
   outline-offset: 3px;
 }
 
+// ---- Animationen -------------------------------------------------------------------------------
+// Gemeinsame Bausteine für alle Seiten. Verzögerung für gestaffelte Listen über `--i`
+// (im Template: `[style.--i]="$index"`).
+
+@keyframes ml-pop-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes ml-slide-up {
+  from { opacity: 0; transform: translateY(1.25rem); }
+}
+
+@keyframes ml-bump {
+  40% { transform: scale(1.35); }
+}
+
+@keyframes ml-wiggle {
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
+
+@keyframes ml-bounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-0.6rem) scale(1.05); }
+  50% { transform: translateY(0) scale(0.97, 1.03); }
+  70% { transform: translateY(-0.2rem); }
+}
+
+@keyframes ml-float {
+  50% { transform: translateY(-0.5rem) rotate(-3deg); }
+}
+
+@keyframes ml-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.75; transform: scale(1.12) rotate(8deg); }
+}
+
+@keyframes ml-glow {
+  50% { box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--glow-color, var(--ml-primary)) 25%, transparent); }
+}
+
+// Jede Seite gleitet beim Öffnen sanft herein (Komponenten stehen direkt hinter <router-outlet>)
+main > :not(router-outlet) {
+  display: block;
+  animation: ml-slide-up 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards;
+}
+
+.ml-pop {
+  animation: ml-pop-in 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.ml-slide {
+  animation: ml-slide-up 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+.ml-bump {
+  display: inline-block;
+  animation: ml-bump 0.45s ease;
+}
+
+// Buttons federn beim Drücken leicht ein
+.btn {
+  transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

@@ -61,3 +61,31 @@
 .review-card {
   border: 3px solid var(--ml-sun);
 }
+
+.trophy {
+  display: inline-block;
+  animation: ml-wiggle 1s ease 0.3s;
+}
+
+.stat .bi {
+  display: inline-block;
+  animation: ml-bump 0.5s ease backwards;
+  animation-delay: calc(var(--i, 0) * 60ms + 300ms);
+}
+
+// Verdiente Abzeichen funkeln, Fortschrittsbalken wachsen beim Öffnen von links herein
+.badge-card.earned .badge-icon {
+  animation: ml-twinkle 2.5s ease-in-out infinite;
+}
+
+.badge-card:hover .badge-icon {
+  animation: ml-wiggle 0.6s ease;
+}
+
+.progress-bar {
+  animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) backwards 0.3s;
+}
+
+@keyframes grow {
+  from { width: 0; }
+}

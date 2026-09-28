@@ -8,9 +8,56 @@
 }
 
 .streak {
+  display: inline-block;
   font-weight: 800;
   color: var(--ml-coral);
   animation: pop 0.3s ease;
+
+  .bi-fire {
+    display: inline-block;
+    animation: flicker 0.8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes flicker {
+  from { transform: scale(1) rotate(-6deg); }
+  to { transform: scale(1.2) rotate(6deg); }
+}
+
+.task-card {
+  animation: task-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards;
+}
+
+@keyframes task-in {
+  from { opacity: 0; transform: translateX(2.5rem) rotate(2deg); }
+}
+
+// Sterne fliegen bei einer richtigen Antwort kreisförmig aus dem Knopf
+.burst {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  pointer-events: none;
+
+  .bi {
+    position: absolute;
+    left: -0.5rem;
+    top: -0.5rem;
+    font-size: 1rem;
+    color: var(--ml-sun);
+    opacity: 0;
+    --angle: calc(var(--n) * 45deg);
+    animation: burst 0.7s ease-out forwards;
+  }
+}
+
+@keyframes burst {
+  0% { opacity: 1; transform: rotate(var(--angle)) translateY(0) scale(0.4); }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateY(-4.5rem) scale(1.2); }
+}
+
+.praise-emoji {
+  display: inline-block;
+  animation: ml-wiggle 0.8s ease 0.1s;
 }
 
 .task-progress {
@@ -105,7 +152,7 @@
 
 .state-correct {
   --choice-color: #2fb344;
-  animation: pop 0.3s ease;
+  animation: ml-bounce 0.6s ease;
 }
 
 .state-wrong {
@@ -147,7 +194,7 @@
   font-size: 2rem;
   text-align: center;
   color: #2fb344;
-  animation: pop 0.3s ease;
+  animation: ml-pop-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2);
 }
 
 .feedback-bad {

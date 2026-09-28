@@ -121,3 +121,27 @@
   --bs-btn-padding-y: 0.9rem;
   font-size: 1.4rem;
 }
+
+// „Los geht's!“ lädt sanft pulsierend zum Starten ein
+.btn-start:not(:disabled) {
+  --glow-color: var(--ml-primary);
+  animation: ml-glow 1.8s ease-in-out infinite;
+
+  &:hover .bi {
+    display: inline-block;
+    animation: ml-wiggle 0.6s ease;
+  }
+}
+
+.btn-check:checked + .btn-op,
+.btn-check:checked + .btn-choice {
+  animation: ml-bump 0.35s ease;
+}
+
+.step-number {
+  transition: transform 0.2s ease;
+
+  .setup-step:hover & {
+    transform: rotate(-10deg) scale(1.1);
+  }
+}

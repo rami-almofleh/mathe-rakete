@@ -13,15 +13,29 @@
   .earned {
     display: inline-block;
     color: var(--ml-sun);
-    animation: star-in 0.5s ease backwards;
+    filter: drop-shadow(0 0.2rem 0.4rem rgba(255, 201, 60, 0.5));
+    // erst hereinwirbeln, danach dauerhaft leicht funkeln
+    animation:
+      star-in 0.7s cubic-bezier(0.2, 0.8, 0.3, 1.4) backwards,
+      ml-twinkle 2.5s ease-in-out 1.3s infinite;
+    animation-delay: calc(var(--d, 0) * 1ms), calc(var(--d, 0) * 1ms + 1300ms);
   }
 }
 
 @keyframes star-in {
   from {
     opacity: 0;
-    transform: scale(0.3) rotate(-40deg);
+    transform: scale(0.2) rotate(-180deg);
   }
+}
+
+.headline {
+  animation: ml-pop-in 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.3s backwards;
+}
+
+.trophy {
+  display: inline-block;
+  animation: ml-wiggle 1s ease 0.8s 2;
 }
 
 .stat {
@@ -80,6 +94,6 @@
     background: var(--ml-sun);
     color: var(--ml-ink);
     font-size: 1.5rem;
-    animation: star-in 0.6s ease backwards;
+    animation: star-in 0.7s ease 1s backwards, ml-twinkle 2.5s ease-in-out 1.8s infinite;
   }
 }

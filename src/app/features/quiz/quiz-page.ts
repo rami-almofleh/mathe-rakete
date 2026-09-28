@@ -28,6 +28,8 @@ export class QuizPage implements OnDestroy {
   protected readonly phase = this.session.phase;
   protected readonly lastRecord = this.session.lastRecord;
   protected readonly praise = signal(PRAISE[0]);
+  /** Sterne, die bei einer richtigen Antwort aus dem Knopf fliegen */
+  protected readonly burst = [0, 1, 2, 3, 4, 5, 6, 7];
 
   protected readonly isRound = computed(() => this.session.settings()?.timer.mode === 'perRound');
   protected readonly taskNumber = computed(() => this.session.records().length + (this.phase() === 'question' ? 1 : 0));

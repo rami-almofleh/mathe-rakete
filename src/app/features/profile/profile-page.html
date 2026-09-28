@@ -3,7 +3,7 @@
     <h1 class="h2 text-center mb-4">Wer übt heute?</h1>
     <div class="row g-3 justify-content-center">
       @for (p of cards(); track p.id) {
-        <div class="col-6 col-md-4">
+        <div class="col-6 col-md-4 ml-pop" [style.--i]="$index">
           <div class="card profile-card h-100 color-{{ p.color }}" [class.active]="p.id === store.activeId()">
             <button type="button" class="profile-choose" (click)="choose(p)" [attr.aria-label]="p.name + ' auswählen'">
               <span class="avatar"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
@@ -19,7 +19,7 @@
           </div>
         </div>
       }
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-4 ml-pop" [style.--i]="cards().length">
         <button type="button" class="card profile-card add h-100 w-100" (click)="startNew()">
           <span class="avatar"><i class="bi bi-plus-lg" aria-hidden="true"></i></span>
           <span class="fw-bold mt-2">Neues Kind</span>
@@ -27,7 +27,7 @@
       </div>
     </div>
   } @else {
-    <div class="card">
+    <div class="card ml-slide">
       <div class="card-body">
         <h1 class="h3 mb-4">{{ editing() === 'new' ? (store.profiles().length ? 'Neues Kind' : 'Hallo! Wie heißt du?') : 'Profil bearbeiten' }}</h1>
 

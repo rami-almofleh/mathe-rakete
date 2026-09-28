@@ -96,3 +96,32 @@
   width: 2.5rem;
   height: 2.5rem;
 }
+
+// Avatar hüpft beim Drüberfahren, aktives Profil leuchtet sanft
+.profile-card:hover .avatar {
+  animation: ml-bounce 0.6s ease;
+}
+
+.profile-card.active {
+  --glow-color: var(--profile-color);
+  animation: ml-glow 2s ease-in-out infinite;
+}
+
+.profile-card.add:hover .bi-plus-lg {
+  display: inline-block;
+  animation: ml-wiggle 0.6s ease;
+}
+
+.icon-option,
+.color-option {
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.12);
+  }
+}
+
+.btn-check:checked + .icon-option,
+.btn-check:checked + .color-option {
+  animation: ml-bump 0.35s ease;
+}
