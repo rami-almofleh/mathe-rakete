@@ -17,6 +17,7 @@ const EMPTY_PROGRESS_JSON = JSON.stringify({
   lastSettings: {},
   mistakes: [],
   sound: false,
+  lessons: {},
 });
 
 function ownsProfile(profileId: string, userId: number): boolean {

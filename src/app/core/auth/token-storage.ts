@@ -13,3 +13,6 @@ export const TOKEN_STORAGE = new InjectionToken<Storage | null>('TOKEN_STORAGE',
 });
 
 export const TOKEN_KEY = 'mathe-rakete.token';
+
+/** Gesetzt, solange jemand ohne Konto als Gast übt (Daten dann nur im Browser, siehe `LocalApiClient`). */
+export const GUEST_KEY = 'mathe-rakete.guest';

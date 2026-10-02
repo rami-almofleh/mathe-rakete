@@ -1,5 +1,5 @@
 import { GRADES } from '../models';
-import { findTopic, gradeOf, GRADE_INFO, TOPICS, topicsForGrade, topicsUpToGrade } from './curriculum';
+import { CHAPTERS, chaptersForGrade, findChapter, findTopic, gradeOf, GRADE_INFO, OTHER_CHAPTER_ID, TOPICS, topicsForGrade, topicsUpToGrade } from './curriculum';
 import { STATE_GRADE_OVERRIDES, STATE_OPTIONS } from './states';
 
 describe('curriculum', () => {
@@ -22,6 +22,41 @@ describe('curriculum', () => {
     const upTo3 = topicsUpToGrade(3);
     expect(upTo3.some((t) => t.grade === 1)).toBe(true);
     expect(upTo3.some((t) => t.grade === 4)).toBe(false);
+  });
+});
+
+describe('Bereiche (Lektionsliste)', () => {
+  it('puts every topic into an existing chapter of its own grade', () => {
+    for (const topic of TOPICS) {
+      const chapter = findChapter(topic.chapter);
+      expect(chapter, `${topic.id}: unbekannter Bereich ${topic.chapter}`).toBeTruthy();
+      expect(chapter!.grade, topic.id).toBe(topic.grade);
+    }
+  });
+
+  it('uses unique chapter ids and no empty chapters', () => {
+    const ids = CHAPTERS.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const chapter of CHAPTERS) {
+      expect(TOPICS.some((t) => t.chapter === chapter.id), chapter.id).toBe(true);
+    }
+  });
+
+  it('lists every topic of a grade exactly once, in chapter order', () => {
+    for (const state of STATE_OPTIONS.map((s) => s.id)) {
+      for (const grade of GRADES) {
+        const listed = chaptersForGrade(grade, state).flatMap((g) => g.topics.map((t) => t.id));
+        expect(listed.sort(), `${state}/${grade}`).toEqual(topicsForGrade(grade, state).map((t) => t.id).sort());
+      }
+    }
+    expect(chaptersForGrade(3).map((g) => g.chapter.title)).toEqual(['Plus und Minus bis 1 000', 'Mal und geteilt', 'Größen', 'Geometrie']);
+  });
+
+  it('moves a topic of another grade into a fitting chapter (Bundesland)', () => {
+    // Bayern: Flächen von Dreieck & Co. schon in Kl. 6 → dort unter „Geometrie“
+    const geometry = chaptersForGrade(6, 'by').find((g) => g.chapter.id === 'k6-geometrie');
+    expect(geometry?.topics.map((t) => t.id)).toContain('k8-areas');
+    expect(chaptersForGrade(6, 'by').some((g) => g.chapter.id === OTHER_CHAPTER_ID && g.topics.some((t) => t.id === 'k8-areas'))).toBe(false);
   });
 });
 

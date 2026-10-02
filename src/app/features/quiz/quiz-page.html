@@ -7,6 +7,8 @@
       <span class="fw-bold display-font">
         @if (isRound()) {
           Aufgabe {{ taskNumber() }}
+        } @else if (stepLabel(); as label) {
+          {{ label }} · {{ taskNumber() }} von {{ taskCount() }}
         } @else {
           Aufgabe {{ taskNumber() }} von {{ taskCount() }}
         }
@@ -107,7 +109,8 @@
                   }
                   Richtig ist: <app-math [content]="t.choices[t.correctIndex].display" />
                 </p>
-                @if (t.explanation?.length) {
+                <!-- Im Lektions-Test gibt es keine Hilfen (wie bei ANTON) – der Lösungsweg kommt auf der Ergebnis-Seite -->
+                @if (t.explanation?.length && !isTest()) {
                   <div class="explanation">
                     <div class="small fw-bold text-muted-kid mb-1">So geht's:</div>
                     @for (line of t.explanation; track $index) {

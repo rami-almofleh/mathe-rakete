@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth/auth.service';
 import { GRADES, Grade } from '../../core/models';
 import { MAX_NAME_LENGTH, Profile, PROFILE_COLORS, PROFILE_ICONS, ProfileColor, ProfileStore } from '../../core/progress/profile-store';
 import { ProgressStore } from '../../core/progress/progress-store';
@@ -7,11 +8,13 @@ import { STATE_OPTIONS } from '../../core/curriculum/states';
 
 @Component({
   selector: 'app-profile-page',
+  imports: [RouterLink],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.scss',
 })
 export class ProfilePage {
   protected readonly store = inject(ProfileStore);
+  protected readonly auth = inject(AuthService);
   private readonly progress = inject(ProgressStore);
   private readonly router = inject(Router);
 

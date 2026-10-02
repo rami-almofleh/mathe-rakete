@@ -1,6 +1,13 @@
 <div class="profile-page mx-auto">
   @if (editing() === null) {
     <h1 class="h2 text-center mb-4">Wer übt heute?</h1>
+    @if (auth.isGuest()) {
+      <p class="guest-note text-center small text-muted-kid">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        Du übst als Gast – alles wird nur in diesem Browser gespeichert.
+        <a routerLink="/login" [queryParams]="{ neu: 1 }">Konto anlegen</a>
+      </p>
+    }
     <div class="row g-3 justify-content-center">
       @for (p of cards(); track p.id) {
         <div class="col-6 col-md-4 ml-pop" [style.--i]="$index">
@@ -91,7 +98,11 @@
             </button>
           }
         </div>
-        <p class="small text-muted-kid mt-3 mb-0"><i class="bi bi-shield-lock" aria-hidden="true"></i> Dein Fortschritt ist an dein Konto gebunden und auf allen Geräten sichtbar, auf denen du dich anmeldest.</p>
+        @if (auth.isGuest()) {
+          <p class="small text-muted-kid mt-3 mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> Als Gast wird dein Fortschritt nur in diesem Browser gespeichert. Mit einem <a routerLink="/login" [queryParams]="{ neu: 1 }">Konto</a> kannst du ihn später übernehmen.</p>
+        } @else {
+          <p class="small text-muted-kid mt-3 mb-0"><i class="bi bi-shield-lock" aria-hidden="true"></i> Dein Fortschritt ist an dein Konto gebunden und auf allen Geräten sichtbar, auf denen du dich anmeldest.</p>
+        }
       </div>
     </div>
   }

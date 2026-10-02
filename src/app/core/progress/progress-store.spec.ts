@@ -56,6 +56,36 @@ describe('parseProgress', () => {
   });
 });
 
+describe('parseProgress – Lektionen', () => {
+  it('accepts older data without lessons and drops invalid lesson entries', () => {
+    expect(parseProgress(JSON.stringify({ version: 1 })).lessons).toEqual({});
+    const data = parseProgress(
+      JSON.stringify({ version: 1, lessons: { a: { steps: { easy: 3, medium: 7, bogus: 2, test: 1 }, lastPlayed: '2026-10-01' }, b: 'kaputt' } }),
+    );
+    expect(data.lessons).toEqual({ a: { steps: { easy: 3, test: 1 }, lastPlayed: '2026-10-01' } });
+  });
+});
+
+describe('ProgressStore – Lektionen', () => {
+  const lessonRound = (step: 'easy' | 'test'): QuizSettings => ({ ...settings, mode: 'topics', topicIds: ['k3-add-1000'], lesson: { topicId: 'k3-add-1000', step } });
+
+  it('keeps the best stars per step and remembers the last lesson', () => {
+    const store = storeWith(new FakeApiClient());
+    store.recordRound(lessonRound('easy'), answers('1111111111'), 3);
+    store.recordRound(lessonRound('easy'), answers('0000000000'), 0); // schwächerer Versuch nimmt nichts weg
+    store.recordRound(lessonRound('test'), answers('1100000000'), 1);
+    expect(store.lesson('k3-add-1000').steps).toEqual({ easy: 3, test: 1 });
+    expect(store.lastLessonId()).toBe('k3-add-1000');
+    expect(store.lesson('k3-sub-1000')).toEqual({ steps: {} });
+  });
+
+  it('does not touch lessons in free practice', () => {
+    const store = storeWith(new FakeApiClient());
+    store.recordRound(settings, answers('1111'), 3);
+    expect(store.data().lessons).toEqual({});
+  });
+});
+
 describe('ProgressStore', () => {
   it('records rounds, topic statistics and the best streak', () => {
     const api = new FakeApiClient();

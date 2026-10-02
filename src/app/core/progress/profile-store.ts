@@ -1,6 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Grade, isGrade } from '../models';
-import { ApiClient } from '../auth/api-client';
+import { DataApi } from '../auth/data-api';
 
 export const PROFILE_ICONS = [
   'bi-rocket-takeoff-fill', 'bi-star-fill', 'bi-heart-fill', 'bi-lightning-charge-fill',
@@ -64,7 +64,7 @@ export function sanitizeProfile(p: Partial<Profile> & { id: string }): Profile {
  */
 @Injectable({ providedIn: 'root' })
 export class ProfileStore {
-  private readonly api = inject(ApiClient);
+  private readonly api = inject(DataApi);
 
   private readonly _data = signal<ProfilesData>({ profiles: [], activeId: null });
   private readonly _totalStars = signal<Readonly<Record<string, number>>>({});

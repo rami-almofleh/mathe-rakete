@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { gradeOf, TOPICS } from '../../core/curriculum/curriculum';
+import { chaptersForGrade, TOPICS } from '../../core/curriculum/curriculum';
 import { DIFFICULTIES, GRADES } from '../../core/models';
 import { BADGES } from '../../core/progress/badges';
 import { ProfileStore } from '../../core/progress/profile-store';
@@ -27,14 +27,20 @@ export class ProgressPage {
   /** Geübte Themen, nach Klasse gruppiert. */
   protected readonly topicsByGrade = computed(() => {
     const stats = this.data().topics;
+    // je Klasse nach Bereichen gegliedert, wie die Lektionsliste
     return GRADES.map((grade) => ({
       grade,
-      topics: TOPICS.filter((t) => gradeOf(t, this.state()) === grade && stats[t.id]?.answered).map((t) => {
-        const s = stats[t.id];
-        const percent = Math.round((s.correct / s.answered) * 100);
-        return { title: t.title, ...s, percent, level: percent >= 90 ? 'great' : percent >= 70 ? 'good' : 'practice' };
-      }),
-    })).filter((g) => g.topics.length);
+      chapters: chaptersForGrade(grade, this.state())
+        .map(({ chapter, topics }) => ({
+          title: chapter.title,
+          topics: topics.filter((t) => stats[t.id]?.answered).map((t) => {
+            const s = stats[t.id];
+            const percent = Math.round((s.correct / s.answered) * 100);
+            return { title: t.title, ...s, percent, level: percent >= 90 ? 'great' : percent >= 70 ? 'good' : 'practice' };
+          }),
+        }))
+        .filter((c) => c.topics.length),
+    })).filter((g) => g.chapters.length);
   });
 
   /** Themen mit deutlicher Unsicherheit (gleitender Wert unter 70 %) */

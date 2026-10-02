@@ -15,6 +15,9 @@
       @if (isReview()) {
         <p class="text-muted-kid mb-0"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Wiederholungsrunde</p>
       }
+      @if (lessonLine(); as line) {
+        <p class="text-muted-kid mb-0"><i class="bi bi-list-check" aria-hidden="true"></i> {{ line }}</p>
+      }
 
       <div class="row g-3 mt-3 justify-content-center">
         <div class="col-4 col-md-3 ml-pop" style="--i: 8">
@@ -38,7 +41,12 @@
       </div>
 
       <div class="d-flex flex-wrap justify-content-center gap-2 mt-4 ml-slide" style="--i: 12">
-        <button type="button" class="btn btn-primary btn-lg" (click)="playAgain()">
+        @if (nextStep(); as step) {
+          <button type="button" class="btn btn-primary btn-lg" (click)="startStep(step)">
+            {{ stepName(step) }} <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          </button>
+        }
+        <button type="button" class="btn btn-lg" [class.btn-primary]="!nextStep()" [class.btn-outline-primary]="nextStep()" (click)="playAgain()">
           <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i> Nochmal
         </button>
         @if (toReview().length) {
@@ -47,9 +55,15 @@
           </a>
         }
         @if (settings(); as s) {
-          <a class="btn btn-outline-primary btn-lg" [routerLink]="['/klasse', s.grade]">
-            <i class="bi bi-sliders me-1" aria-hidden="true"></i> Einstellungen
-          </a>
+          @if (s.lesson) {
+            <a class="btn btn-outline-primary btn-lg" [routerLink]="['/klasse', s.grade, 'lektion', s.lesson.topicId]">
+              <i class="bi bi-list-check me-1" aria-hidden="true"></i> Zur Lektion
+            </a>
+          } @else {
+            <a class="btn btn-outline-primary btn-lg" [routerLink]="['/klasse', s.grade, 'frei']">
+              <i class="bi bi-sliders me-1" aria-hidden="true"></i> Einstellungen
+            </a>
+          }
         }
         <a class="btn btn-outline-secondary btn-lg" routerLink="/">
           <i class="bi bi-house-fill me-1" aria-hidden="true"></i> Start

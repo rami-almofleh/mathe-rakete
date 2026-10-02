@@ -1,0 +1,84 @@
+.lesson-page {
+  max-width: 44rem;
+}
+
+.btn-round {
+  --bs-btn-padding-x: 0.9rem;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.lesson-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: var(--ml-primary);
+  color: #fff;
+  font-size: 1.6rem;
+}
+
+.step-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.1rem 0.5rem;
+  border: 3px solid #e6e0ff;
+  background: var(--ml-surface);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-3px);
+    border-color: var(--ml-primary);
+  }
+
+  &.status-started {
+    border-color: var(--ml-sun);
+  }
+
+  &.status-done {
+    border-color: #3cc46b;
+  }
+
+  // Nächster Schritt hüpft leicht – zeigt dem Kind, wo es weitergeht
+  &.next {
+    border-color: var(--ml-primary);
+    animation: step-nudge 2.4s ease-in-out infinite;
+  }
+
+  &.quiet {
+    opacity: 0.6;
+  }
+}
+
+.step-icon {
+  font-size: 2rem;
+  color: var(--ml-primary);
+
+  .is-test & {
+    color: var(--ml-sun);
+  }
+}
+
+.step-stars {
+  color: var(--ml-sun);
+  font-size: 1.1rem;
+  letter-spacing: 0.1rem;
+}
+
+@keyframes step-nudge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-card.next {
+    animation: none;
+  }
+}

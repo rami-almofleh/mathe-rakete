@@ -1,0 +1,60 @@
+@if (gradeNumber(); as g) {
+  <div class="grade-page mx-auto">
+    <header class="d-flex align-items-center gap-3 mb-4">
+      <a class="btn btn-outline-primary btn-round" routerLink="/klassen" aria-label="Andere Klasse wählen">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+      </a>
+      <div class="flex-grow-1 min-w-0">
+        <h1 class="h2 mb-0">Mathe Klasse {{ g }}</h1>
+        <div class="text-muted-kid">{{ tagline() }}</div>
+      </div>
+      <a class="btn btn-outline-primary free-practice" [routerLink]="['/klasse', g, 'frei']" aria-label="Frei üben: Themen, Zeit und Anzahl selbst wählen">
+        <i class="bi bi-sliders" aria-hidden="true"></i>
+        <span class="d-none d-sm-inline ms-1">Frei üben</span>
+      </a>
+    </header>
+
+    @for (group of groups(); track group.chapter.id; let gi = $index) {
+      <section class="chapter mb-4 ml-slide" [style.--i]="gi" [attr.aria-labelledby]="'chapter-' + group.chapter.id">
+        <h2 class="chapter-title h5" [id]="'chapter-' + group.chapter.id">{{ group.chapter.title }}</h2>
+        <div class="card lesson-list">
+          @for (l of group.lessons; track l.topic.id) {
+            @if (l.ready) {
+              <a class="lesson-row" [routerLink]="['/klasse', g, 'lektion', l.topic.id]">
+                <ng-container *ngTemplateOutlet="row; context: { $implicit: l, color: group.color }" />
+              </a>
+            } @else {
+              <div class="lesson-row soon" aria-disabled="true">
+                <ng-container *ngTemplateOutlet="row; context: { $implicit: l, color: group.color }" />
+              </div>
+            }
+          }
+        </div>
+      </section>
+    }
+  </div>
+
+  <ng-template #row let-l let-color="color">
+    <span class="lesson-icon color-{{ color }}"><i class="bi {{ l.topic.icon }}" aria-hidden="true"></i></span>
+    <span class="lesson-text">
+      <span class="lesson-title">{{ l.topic.title }}</span>
+      <small class="lesson-example">{{ l.topic.example }}</small>
+    </span>
+    @if (!l.ready) {
+      <span class="badge rounded-pill text-bg-light">bald</span>
+    } @else if (l.topic.id === lastLessonId()) {
+      <span class="last-played">Zuletzt geübt</span>
+    }
+    <span class="lesson-bar" role="img" [attr.aria-label]="l.doneCount + ' von 4 Schritten geschafft'">
+      @for (seg of l.segments; track $index) {
+        <span class="seg seg-{{ seg }}"></span>
+      }
+    </span>
+    <i class="bi bi-chevron-right lesson-chevron" aria-hidden="true"></i>
+  </ng-template>
+} @else {
+  <div class="text-center py-5">
+    <p class="lead">Diese Klasse gibt es nicht.</p>
+    <a class="btn btn-primary mt-3" routerLink="/klassen">Klasse wählen</a>
+  </div>
+}

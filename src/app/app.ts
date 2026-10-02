@@ -14,10 +14,10 @@ import { ProgressStore } from './core/progress/progress-store';
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/">
           <span class="brand-icon"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i></span>
-          <span class="display-font" [class.d-none]="auth.isAuthed()" [class.d-sm-inline]="auth.isAuthed()">Mathe-Rakete</span>
+          <span class="display-font" [class.d-none]="auth.hasSession()" [class.d-sm-inline]="auth.hasSession()">Mathe-Rakete</span>
         </a>
         <div class="d-flex align-items-center gap-1 gap-sm-2">
-          @if (auth.isAuthed()) {
+          @if (auth.hasSession()) {
             @if (profiles.active(); as p) {
               <a class="btn btn-sm btn-outline-primary nav-profile color-{{ p.color }}" routerLink="/profil" [attr.aria-label]="'Profil wechseln (' + p.name + ')'">
                 <span class="nav-avatar"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
@@ -46,10 +46,19 @@ import { ProgressStore } from './core/progress/progress-store';
                 <i class="bi" [class.bi-volume-up-fill]="progress.sound()" [class.bi-volume-mute-fill]="!progress.sound()" aria-hidden="true"></i>
               </button>
             }
-            <button type="button" class="btn btn-sm btn-outline-secondary nav-logout" aria-label="Abmelden" (click)="logout()">
-              <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-              <span class="d-none d-sm-inline">Abmelden</span>
-            </button>
+            @if (auth.isGuest()) {
+              <!-- Gast: Daten liegen nur im Browser → zum Konto anlegen einladen -->
+              <a class="btn btn-sm btn-outline-secondary nav-logout" routerLink="/login" [queryParams]="{ neu: 1 }"
+                 aria-label="Gast – Konto anlegen, damit nichts verloren geht">
+                <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">Konto anlegen</span>
+              </a>
+            } @else {
+              <button type="button" class="btn btn-sm btn-outline-secondary nav-logout" aria-label="Abmelden" (click)="logout()">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">Abmelden</span>
+              </button>
+            }
           } @else {
             <a class="btn btn-sm btn-primary nav-login" routerLink="/login">Anmelden</a>
           }

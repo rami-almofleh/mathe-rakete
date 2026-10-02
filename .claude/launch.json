@@ -4,7 +4,25 @@
     {
       "name": "math-learning",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["start", "--", "--port", "4310"],
+      "runtimeArgs": [
+        "start",
+        "--",
+        "--port",
+        "4310"
+      ],
+      "port": 4310
+    },
+    {
+      "name": "math-learning-full",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "concurrently",
+        "-k",
+        "-n",
+        "web,api",
+        "npm run start -- --port 4310",
+        "PORT=3000 npm run dev:server"
+      ],
       "port": 4310
     }
   ]

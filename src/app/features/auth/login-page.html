@@ -5,43 +5,126 @@
         <i class="bi bi-rocket-takeoff-fill text-primary login-rocket" aria-hidden="true"></i>
         Mathe-Rakete
       </h1>
-      <p class="text-center text-muted-kid mb-4">{{ mode() === 'login' ? 'Schön, dass du wieder da bist!' : 'Leg dein Konto an' }}</p>
+      @if (guestProfiles().length) {
+        <div class="guest-import ml-slide">
+          <p class="text-center fw-bold mb-2">In diesem Browser sind noch Profile gespeichert:</p>
+          <ul class="list-unstyled d-flex flex-wrap justify-content-center gap-2 mb-3">
+            @for (p of guestProfiles(); track p.id) {
+              <li class="guest-chip color-{{ p.color }}">
+                <i class="bi {{ p.icon }}" aria-hidden="true"></i>
+                {{ p.name }}
+              </li>
+            }
+          </ul>
+          <p class="text-center text-muted-kid mb-4">
+            Sollen sie mit allen Sternen und Abzeichen in dein Konto übernommen werden? Dann sind
+            sie auf jedem Gerät da.
+          </p>
 
-      <form (submit)="$event.preventDefault(); submit()">
-        <div class="mb-3">
-          <label class="form-label fw-bold" for="login-email">E-Mail-Adresse</label>
-          <input id="login-email" class="form-control form-control-lg" type="email" autocomplete="email" required
-                 [value]="email()" (input)="email.set($any($event.target).value)" placeholder="lena@beispiel.de" />
-        </div>
-        <div class="mb-4">
-          <label class="form-label fw-bold" for="login-password">Passwort</label>
-          <input id="login-password" class="form-control form-control-lg" type="password"
-                 [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'" required
-                 [attr.minlength]="mode() === 'register' ? minPassword : null"
-                 [value]="password()" (input)="password.set($any($event.target).value)" placeholder="Mindestens {{ minPassword }} Zeichen" />
-        </div>
-
-        @if (error(); as message) {
-          <div class="alert alert-danger login-error" role="alert">{{ message }}</div>
-        }
-
-        <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="busy()">
-          @if (busy()) {
-            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          @if (error(); as message) {
+            <div class="alert alert-danger login-error" role="alert">{{ message }}</div>
           }
-          {{ mode() === 'login' ? 'Anmelden' : 'Konto erstellen' }}
-        </button>
-      </form>
 
-      <p class="text-center mt-4 mb-0">
-        @if (mode() === 'login') {
-          Noch kein Konto?
-          <button type="button" class="btn btn-link p-0" (click)="toggleMode()">Jetzt anlegen</button>
-        } @else {
-          Schon ein Konto?
-          <button type="button" class="btn btn-link p-0" (click)="toggleMode()">Anmelden</button>
-        }
-      </p>
+          <button
+            type="button"
+            class="btn btn-primary btn-lg w-100 mb-2"
+            [disabled]="busy()"
+            (click)="importGuestProfiles()"
+          >
+            @if (busy()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            Ja, ins Konto übernehmen
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary w-100 mb-2"
+            [disabled]="busy()"
+            (click)="skipImport(false)"
+          >
+            Nein, nur im Browser lassen
+          </button>
+          <button
+            type="button"
+            class="btn btn-link text-danger w-100"
+            [disabled]="busy()"
+            (click)="skipImport(true)"
+          >
+            Aus dem Browser löschen
+          </button>
+        </div>
+      } @else {
+        <p class="text-center text-muted-kid mb-4">
+          {{ mode() === 'login' ? 'Schön, dass du wieder da bist!' : 'Leg dein Konto an' }}
+        </p>
+
+        <form (submit)="$event.preventDefault(); submit()">
+          <div class="mb-3">
+            <label class="form-label fw-bold" for="login-email">E-Mail-Adresse</label>
+            <input
+              id="login-email"
+              class="form-control form-control-lg"
+              type="email"
+              autocomplete="email"
+              required
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+              placeholder="lena@beispiel.de"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-bold" for="login-password">Passwort</label>
+            <input
+              id="login-password"
+              class="form-control form-control-lg"
+              type="password"
+              [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+              required
+              [attr.minlength]="mode() === 'register' ? minPassword : null"
+              [value]="password()"
+              (input)="password.set($any($event.target).value)"
+              placeholder="Mindestens {{ minPassword }} Zeichen"
+            />
+          </div>
+
+          @if (error(); as message) {
+            <div class="alert alert-danger login-error" role="alert">{{ message }}</div>
+          }
+
+          <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="busy()">
+            @if (busy()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            {{ mode() === 'login' ? 'Anmelden' : 'Konto erstellen' }}
+          </button>
+        </form>
+
+        <p class="text-center mt-4 mb-0">
+          @if (mode() === 'login') {
+            Noch kein Konto?
+            <button type="button" class="btn btn-link p-0" (click)="toggleMode()">
+              Jetzt anlegen
+            </button>
+          } @else {
+            Schon ein Konto?
+            <button type="button" class="btn btn-link p-0" (click)="toggleMode()">Anmelden</button>
+          }
+        </p>
+
+        <div class="guest-divider my-3"><span>oder</span></div>
+        <button
+          type="button"
+          class="btn btn-outline-secondary w-100"
+          [disabled]="busy()"
+          (click)="continueAsGuest()"
+        >
+          <i class="bi bi-person-fill" aria-hidden="true"></i>
+          {{ auth.isGuest() ? 'Weiter als Gast' : 'Ohne Konto als Gast üben' }}
+        </button>
+        <p class="small text-center text-muted-kid mt-2 mb-0">
+          Als Gast wird alles nur in diesem Browser gespeichert.
+        </p>
+      }
     </div>
   </div>
 </div>

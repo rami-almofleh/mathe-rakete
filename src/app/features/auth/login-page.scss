@@ -16,3 +16,29 @@
   25% { transform: translateX(-6px); }
   75% { transform: translateX(6px); }
 }
+
+.guest-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--ml-muted);
+  font-size: 0.875rem;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid currentColor;
+    opacity: 0.3;
+  }
+}
+
+.guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: var(--ml-chip-bg, rgba(0, 0, 0, 0.05));
+  font-weight: 700;
+}

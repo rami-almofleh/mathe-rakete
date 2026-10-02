@@ -36,6 +36,16 @@ export type TimerSetting =
   | { readonly mode: 'perTask'; readonly seconds: number }
   | { readonly mode: 'perRound'; readonly seconds: number };
 
+/** Schritt einer Lektion (wie bei ANTON): Level 1–3 = Einfach/Mittel/Schwer, danach ein gemischter Test ohne Hilfen. */
+export type LessonStep = Difficulty | 'test';
+
+export const LESSON_STEPS: readonly { id: LessonStep; label: string; tasks: number }[] = [
+  { id: 'easy', label: 'Level 1', tasks: 8 },
+  { id: 'medium', label: 'Level 2', tasks: 8 },
+  { id: 'hard', label: 'Level 3', tasks: 8 },
+  { id: 'test', label: 'Test', tasks: 10 },
+];
+
 export interface QuizSettings {
   readonly grade: Grade;
   readonly mode: QuizMode;
@@ -47,4 +57,6 @@ export interface QuizSettings {
   readonly taskCount: number;
   /** Bundesland des Profils (`de` = allgemein) – bestimmt, welche Themen zu welcher Klasse gehören. */
   readonly state?: string;
+  /** Gesetzt, wenn die Runde ein Schritt einer Lektion ist (genau ein Thema). */
+  readonly lesson?: { readonly topicId: string; readonly step: LessonStep };
 }

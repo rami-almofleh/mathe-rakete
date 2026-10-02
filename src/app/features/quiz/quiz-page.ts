@@ -1,5 +1,6 @@
 import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { ClientLogger } from '../../core/logging/client-logger';
+import { LESSON_STEPS } from '../../core/models';
 import { Router } from '@angular/router';
 import { SoundService } from '../../core/progress/sound';
 import { QuizSession } from '../../core/quiz/quiz-session';
@@ -38,6 +39,12 @@ export class QuizPage implements OnDestroy {
   protected readonly burst = [0, 1, 2, 3, 4, 5, 6, 7];
 
   protected readonly isRound = computed(() => this.session.settings()?.timer.mode === 'perRound');
+  protected readonly isTest = computed(() => this.session.settings()?.lesson?.step === 'test');
+  /** „Level 2“ bzw. „Test“ in Lektions-Runden */
+  protected readonly stepLabel = computed(() => {
+    const step = this.session.settings()?.lesson?.step;
+    return step ? LESSON_STEPS.find((s) => s.id === step)?.label : undefined;
+  });
   protected readonly taskNumber = computed(() => this.session.records().length + (this.phase() === 'question' ? 1 : 0));
   protected readonly taskCount = computed(() => this.session.settings()?.taskCount ?? 0);
   protected readonly progressPercent = computed(() =>
@@ -171,9 +178,15 @@ export class QuizPage implements OnDestroy {
   }
 
   protected quit(): void {
-    const grade = this.session.settings()?.grade;
+    const settings = this.session.settings();
     this.session.abandon();
-    void this.router.navigate(grade ? ['/klasse', grade] : ['/']);
+    if (settings?.lesson) {
+      void this.router.navigate(['/klasse', settings.grade, 'lektion', settings.lesson.topicId]);
+    } else if (settings?.mode === 'review') {
+      void this.router.navigate(['/klasse', settings.grade]);
+    } else {
+      void this.router.navigate(settings ? ['/klasse', settings.grade, 'frei'] : ['/']);
+    }
   }
 
   protected onKey(event: KeyboardEvent): void {

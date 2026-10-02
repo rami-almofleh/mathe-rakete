@@ -1,6 +1,6 @@
 import { ARITHMETIC_PLAN } from '../curriculum/arithmetic-plan';
 import { findTopic, gradeOf, Topic, TOPICS, topicsUpToGrade } from '../curriculum/curriculum';
-import { Difficulty, Grade, Operation, OPERATIONS, QuizSettings } from '../models';
+import { Difficulty, Grade, LESSON_STEPS, LessonStep, Operation, OPERATIONS, QuizSettings } from '../models';
 
 export type HasGenerator = (topicId: string) => boolean;
 
@@ -63,6 +63,13 @@ export function defaultTopicSelection(grade: Grade, has: HasGenerator, state = '
 }
 
 export function poolFor(settings: QuizSettings, has: HasGenerator): PoolEntry[] {
+  if (settings.lesson) {
+    const topic = findTopic(settings.lesson.topicId);
+    if (!topic || !has(topic.id)) return [];
+    // Test: alle drei Level gemischt; sonst genau das Level
+    const difficulties: readonly Difficulty[] = settings.lesson.step === 'test' ? ['easy', 'medium', 'hard'] : [settings.lesson.step];
+    return difficulties.map((difficulty) => ({ topic, difficulty }));
+  }
   if (settings.mode === 'arithmetic') {
     return arithmeticPool(settings.grade, settings.operations, settings.difficulty, has, settings.state);
   }
@@ -70,4 +77,20 @@ export function poolFor(settings: QuizSettings, has: HasGenerator): PoolEntry[] 
   return topicsUpToGrade(settings.grade, settings.state)
     .filter((t) => allowed.has(t.id) && has(t.id))
     .map((topic) => ({ topic, difficulty: settings.difficulty }));
+}
+
+/** Einstellungen für einen Schritt einer Lektion: ohne Zeit, feste Aufgabenzahl. */
+export function lessonSettings(grade: Grade, topicId: string, step: LessonStep, state?: string): QuizSettings {
+  const info = LESSON_STEPS.find((s) => s.id === step)!;
+  return {
+    grade,
+    mode: 'topics',
+    operations: [],
+    topicIds: [topicId],
+    difficulty: step === 'test' ? 'medium' : step,
+    timer: { mode: 'off' },
+    taskCount: info.tasks,
+    state,
+    lesson: { topicId, step },
+  };
 }

@@ -238,3 +238,19 @@ selben Projekt (kein Datei-Export/Import). **Wichtig:** Es gibt keine automatisc
 - [x] Echter Fehler aus den Logs (iPad, Chrome): Am Rundenende hing das Netz – das Speichern brach nach 12 s ab, und weil die Ergebnis-Seite erst in diesem Moment nachgeladen wurde, blieb die App auf der Quiz-Seite stehen (Kacheln gesperrt, Timer aus). Behoben: alle Seiten werden nach dem Start vorgeladen (`withPreloading`), der Wächter versucht den Wechsel zum Ergebnis erneut, Seitenwechsel werden überwacht (`nav:*`-Brotkrumen, Meldung nach 8 s)
 - [x] Speichern des Fortschritts: nacheinander statt parallel (kein Überholen älterer Stände), bei Fehlern Wiederholung mit wachsendem Abstand und bei `online`, ungespeicherte lokale Stände werden nie von älteren Server-Ständen überschrieben; jede API-Anfrage bricht nach 15 s ab
 - [x] Live-Test auf mathe-rakete.almofleh.com: 4 Runden mit Profil „rami“ (Plus mit 15-s-Timer inkl. abgelaufener Zeit, Plus/Minus mittel, Themen mit Bild-Aufgaben, „Nochmal“) – kein Hänger, Sterne 9 → 14 auf dem Server gespeichert. Dabei gefunden und behoben: Fehlalarm des Quiz-Wächters bei schnellen richtigen Antworten hintereinander (prüft jetzt je Aufgabe statt nur je Phase), mit Regressionstest
+
+## Phase 16 – Gast-Modus
+- [x] „Ohne Konto als Gast üben“ auf der Login-Seite: Profile und Fortschritt nur im Browser (`LocalApiClient` hinter `DataApi`, gleiche Endpunkte wie der Server)
+- [x] Nach Anmeldung/Registrierung mit Gast-Profilen im Browser: Rückfrage „ins Konto übernehmen / nur im Browser lassen / löschen“; Übernahme Profil für Profil (bricht nichts doppelt ab)
+
+## Phase 17 – Lektionen wie bei ANTON (Struktur)
+Recherche ANTON: Fach + Klasse → Bereich (z. B. „Größen“) → Lektion → mehrere Übungs-Level → Test ohne Hilfen; Sterne je Level, Pokal für den Test, Fortschrittsbalken je Lektion, Inhalte vom eigenen Autorenteam nach den Lehrplänen der Länder.
+- [x] Katalog: kindgerechte Bereiche je Klasse (`CHAPTERS`), jedes Thema mit Bereich und Icon; `chaptersForGrade()` beachtet Bundesland-Abweichungen (gleicher Bereichstitel → gleiche Leitidee → „Weitere Themen“)
+- [x] `/klasse/:grade` = Lektionsliste nach Bereichen mit senkrechtem Fortschrittsbalken (Level 1–3 + Test; grau/gelb/grün) und „Zuletzt geübt“; bisherige Einstellungsseite als „Frei üben“ unter `/klasse/:grade/frei`
+- [x] `/klasse/:grade/lektion/:topicId`: Level 1–3 (= Einfach/Mittel/Schwer, je 8 Aufgaben) und Test (10 Aufgaben, gemischt, ohne Lösungsweg im Feedback); bestes Ergebnis je Schritt in `ProgressData.lessons`
+- [x] Ergebnis-Seite: „Level 1 geschafft“, „Weiter zu Level 2“ / „Zum Test“, „Zur Lektion“; Fortschritts-Seite gruppiert nach Bereichen
+
+## Phase 18 – Inhalte Grundschule ausbauen (offen)
+Ziel: je Klasse 1–4 etwa 15–25 Lektionen statt 5–7, angelehnt an die ANTON-Gliederung (z. B. Kl. 3: Zahlenraum bis 1 000, Addition/Subtraktion, Schriftlich, Mal/Geteilt, Halbschriftlich, Geometrie, Größen, Daten).
+- [ ] Kl. 3 zuerst: Stellentafel/H-Z-E, Zahlenstrahl, Nachbarzahlen, Runden, Ordnen und Vergleichen, Halbschriftlich mal/geteilt, Längen, Gewichte, Geld, Zeitpunkt/Zeitdauer, Achsensymmetrie, Daten ablesen
+- [ ] danach Kl. 1, 2, 4 nach demselben Muster; Aufteilung zu breiter Themen (z. B. „Größen umrechnen“ → Längen / Gewichte / Zeit)

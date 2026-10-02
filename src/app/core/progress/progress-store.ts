@@ -1,6 +1,7 @@
 import { computed, effect, Injectable, inject, signal } from '@angular/core';
-import { Grade, isGrade, QuizSettings, Task } from '../models';
-import { ApiClient, ApiError } from '../auth/api-client';
+import { Grade, isGrade, LESSON_STEPS, LessonStep, QuizSettings, Task } from '../models';
+import { ApiError } from '../auth/api-client';
+import { DataApi } from '../auth/data-api';
 import { Badge, BADGES, RoundResult } from './badges';
 import { ProfileStore } from './profile-store';
 
@@ -33,6 +34,14 @@ export interface RoundRecord {
   readonly stars: number;
 }
 
+export type StarCount = 0 | 1 | 2 | 3;
+
+/** Bestes Ergebnis je Schritt einer Lektion (Level 1–3 und Test), siehe `LESSON_STEPS`. */
+export interface LessonProgress {
+  readonly steps: Readonly<Partial<Record<LessonStep, StarCount>>>;
+  readonly lastPlayed?: string;
+}
+
 export interface ProgressData {
   readonly version: 1;
   readonly totalStars: number;
@@ -44,6 +53,8 @@ export interface ProgressData {
   readonly lastSettings: Readonly<Partial<Record<Grade, QuizSettings>>>;
   readonly mistakes: readonly StoredMistake[];
   readonly sound: boolean;
+  /** Lektionen je Thema-ID; fehlt in älteren Ständen. */
+  readonly lessons: Readonly<Record<string, LessonProgress>>;
 }
 
 const MAX_RECENT_ROUNDS = 30;
@@ -72,6 +83,7 @@ export const EMPTY_PROGRESS: ProgressData = {
   lastSettings: {},
   mistakes: [],
   sound: false,
+  lessons: {},
 };
 
 /** Prüft/säubert eine Server-Antwort, genau wie früher gespeicherte Browser-Daten. */
@@ -97,10 +109,25 @@ export function parseProgress(raw: string | null): ProgressData {
         ? data.mistakes.filter((m) => m && typeof m.id === 'string' && m.task?.choices?.length === 3).slice(0, MAX_MISTAKES)
         : [],
       sound: data.sound === true,
+      lessons: parseLessons(data.lessons),
     };
   } catch {
     return EMPTY_PROGRESS;
   }
+}
+
+function parseLessons(raw: unknown): Record<string, LessonProgress> {
+  if (!raw || typeof raw !== 'object') return {};
+  const stepIds = LESSON_STEPS.map((s) => s.id as string);
+  const lessons: Record<string, LessonProgress> = {};
+  for (const [topicId, value] of Object.entries(raw as Record<string, Partial<LessonProgress>>)) {
+    if (!value || typeof value !== 'object') continue;
+    const steps = Object.fromEntries(
+      Object.entries(value.steps ?? {}).filter(([step, stars]) => stepIds.includes(step) && [0, 1, 2, 3].includes(stars as number)),
+    );
+    lessons[topicId] = { steps, ...(typeof value.lastPlayed === 'string' ? { lastPlayed: value.lastPlayed } : {}) };
+  }
+  return lessons;
 }
 
 /**
@@ -111,7 +138,7 @@ export function parseProgress(raw: string | null): ProgressData {
  */
 @Injectable({ providedIn: 'root' })
 export class ProgressStore {
-  private readonly api = inject(ApiClient);
+  private readonly api = inject(DataApi);
   private readonly profiles = inject(ProfileStore);
 
   private readonly _data = signal<ProgressData>(EMPTY_PROGRESS);
@@ -129,6 +156,19 @@ export class ProgressStore {
   });
 
   readonly mistakes = computed(() => this._data().mistakes);
+
+  /** Zuletzt geübte Lektion (Thema-ID) – für „Zuletzt geübt“ in der Lektionsliste. */
+  readonly lastLessonId = computed(() => {
+    let best: { id: string; at: string } | null = null;
+    for (const [id, lesson] of Object.entries(this._data().lessons)) {
+      if (lesson.lastPlayed && (!best || lesson.lastPlayed > best.at)) best = { id, at: lesson.lastPlayed };
+    }
+    return best?.id ?? null;
+  });
+
+  lesson(topicId: string): LessonProgress {
+    return this._data().lessons[topicId] ?? { steps: {} };
+  }
 
   /** Noch nicht beim Server angekommene Stände je Profil (immer nur der neueste) */
   private readonly pending = new Map<string, ProgressData>();
@@ -231,7 +271,11 @@ export class ProgressStore {
       correctByTopic: Object.fromEntries(Object.entries(topics).map(([id, t]) => [id, t.correct])),
     };
     const newBadges = BADGES.filter((b) => !current.badges.includes(b.id) && b.earned(context));
-    this.save({ ...next, badges: [...current.badges, ...newBadges.map((b) => b.id)] });
+    this.save({
+      ...next,
+      badges: [...current.badges, ...newBadges.map((b) => b.id)],
+      lessons: settings.lesson ? updateLesson(current.lessons, settings.lesson, stars as StarCount) : current.lessons,
+    });
     return newBadges;
   }
 
@@ -298,6 +342,17 @@ export class ProgressStore {
       this.flushing = false;
     }
   }
+}
+
+/** Bestes Ergebnis zählt – ein schwächerer Versuch nimmt keine Sterne weg. */
+function updateLesson(
+  lessons: Readonly<Record<string, LessonProgress>>,
+  { topicId, step }: { topicId: string; step: LessonStep },
+  stars: StarCount,
+): Record<string, LessonProgress> {
+  const previous = lessons[topicId]?.steps ?? {};
+  const best = Math.max(previous[step] ?? 0, stars) as StarCount;
+  return { ...lessons, [topicId]: { steps: { ...previous, [step]: best }, lastPlayed: new Date().toISOString() } };
 }
 
 /** Falsche Aufgaben vorne einreihen (mehrfach falsch → Zähler hoch), richtig gelöste streichen. */

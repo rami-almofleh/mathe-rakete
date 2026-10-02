@@ -28,10 +28,10 @@ const afterAuth = (check: (auth: AuthService, profiles: ProfileStore, router: Ro
   return check(auth, profiles, router);
 };
 
-/** Ohne Anmeldung geht es zuerst zum Login. */
-const needsAuth = afterAuth((auth, _, router) => auth.isAuthed() || router.createUrlTree(['/login']));
+/** Ohne Anmeldung (oder Gast-Modus) geht es zuerst zum Login. */
+const needsAuth = afterAuth((auth, _, router) => auth.hasSession() || router.createUrlTree(['/login']));
 
-/** Schon angemeldet? Dann hat die Login-Seite nichts mehr zu tun. */
+/** Schon angemeldet? Dann hat die Login-Seite nichts mehr zu tun. Gäste dürfen hin, um ein Konto anzulegen. */
 const redirectIfAuthed = afterAuth((auth, _, router) => !auth.isAuthed() || router.createUrlTree(['/']));
 
 /** Ohne gewähltes Profil zuerst „Wer übt heute?” */
@@ -95,8 +95,22 @@ export const routes: Routes = [
     loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
   },
   {
+    // Lektionsliste der Klasse, gegliedert nach Bereichen (wie bei ANTON)
     path: 'klasse/:grade',
-    title: 'Einstellungen – Mathe-Rakete',
+    title: 'Lektionen – Mathe-Rakete',
+    canActivate: [needsAuth, needsProfile],
+    loadComponent: () => import('./features/grade/grade-page').then((m) => m.GradePage),
+  },
+  {
+    path: 'klasse/:grade/lektion/:topicId',
+    title: 'Lektion – Mathe-Rakete',
+    canActivate: [needsAuth, needsProfile],
+    loadComponent: () => import('./features/lesson/lesson-page').then((m) => m.LessonPage),
+  },
+  {
+    // Freies Üben: Rechenarten/Themen mischen, Zeit und Anzahl selbst wählen
+    path: 'klasse/:grade/frei',
+    title: 'Frei üben – Mathe-Rakete',
     canActivate: [needsAuth, needsProfile],
     loadComponent: () => import('./features/setup/setup-page').then((m) => m.SetupPage),
   },

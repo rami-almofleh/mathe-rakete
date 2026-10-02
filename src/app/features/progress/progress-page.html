@@ -84,16 +84,19 @@
         <div class="card mb-3">
           <div class="card-body">
             <h3 class="h6 fw-bold">Klasse {{ group.grade }}</h3>
-            @for (t of group.topics; track t.title) {
-              <div class="topic-row">
-                <div class="d-flex justify-content-between small">
-                  <span>{{ t.title }}</span>
-                  <span class="text-muted-kid">{{ t.correct }} von {{ t.answered }} richtig</span>
+            @for (chapter of group.chapters; track chapter.title) {
+              <div class="small fw-bold text-muted-kid mt-2 mb-1">{{ chapter.title }}</div>
+              @for (t of chapter.topics; track t.title) {
+                <div class="topic-row">
+                  <div class="d-flex justify-content-between small">
+                    <span>{{ t.title }}</span>
+                    <span class="text-muted-kid">{{ t.correct }} von {{ t.answered }} richtig</span>
+                  </div>
+                  <div class="progress level-{{ t.level }}" role="progressbar" [attr.aria-label]="t.title" [attr.aria-valuenow]="t.percent" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" [style.width.%]="t.percent">{{ t.percent }} %</div>
+                  </div>
                 </div>
-                <div class="progress level-{{ t.level }}" role="progressbar" [attr.aria-label]="t.title" [attr.aria-valuenow]="t.percent" aria-valuemin="0" aria-valuemax="100">
-                  <div class="progress-bar" [style.width.%]="t.percent">{{ t.percent }} %</div>
-                </div>
-              </div>
+              }
             }
           </div>
         </div>

@@ -5,7 +5,7 @@ import { TaskFactory } from '../generators/task-factory';
 import { Rng } from '../math/rng';
 import { Difficulty, Grade, Operation, Task } from '../models';
 import { formatDuration, starsFor, suggestedTaskSeconds } from './quiz-config';
-import { arithmeticPool, availableOperations, defaultTopicSelection, poolFor } from './topic-pool';
+import { arithmeticPool, availableOperations, defaultTopicSelection, lessonSettings, poolFor } from './topic-pool';
 
 const registry = createDefaultRegistry();
 const has = (id: string) => registry.has(id);
@@ -148,5 +148,23 @@ describe('quiz config', () => {
   it('formats durations', () => {
     expect(formatDuration(42_400)).toBe('42 s');
     expect(formatDuration(125_000)).toBe('2:05 min');
+  });
+});
+
+describe('lesson pool', () => {
+  it('uses exactly one level of the lesson topic', () => {
+    const pool = poolFor(lessonSettings(3, 'k3-add-1000', 'medium'), has);
+    expect(pool.map((e) => [e.topic.id, e.difficulty])).toEqual([['k3-add-1000', 'medium']]);
+  });
+
+  it('mixes all three levels in the test, without timer', () => {
+    const settings = lessonSettings(3, 'k3-add-1000', 'test');
+    expect(poolFor(settings, has).map((e) => e.difficulty)).toEqual(['easy', 'medium', 'hard']);
+    expect(settings.timer).toEqual({ mode: 'off' });
+    expect(settings.taskCount).toBe(10);
+  });
+
+  it('is empty for unknown topics', () => {
+    expect(poolFor(lessonSettings(3, 'gibt-es-nicht', 'easy'), has)).toEqual([]);
   });
 });

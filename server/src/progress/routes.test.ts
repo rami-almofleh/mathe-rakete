@@ -36,7 +36,7 @@ describe('progress routes', () => {
     const res = await server.request(`/api/progress/${profile.id}`, { headers: authHeader(token) });
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), {
-      version: 1, totalStars: 0, roundsPlayed: 0, bestStreak: 0, topics: {}, recentRounds: [], badges: [], lastSettings: {}, mistakes: [], sound: false,
+      version: 1, totalStars: 0, roundsPlayed: 0, bestStreak: 0, topics: {}, recentRounds: [], badges: [], lastSettings: {}, mistakes: [], sound: false, lessons: {},
     });
   });
 

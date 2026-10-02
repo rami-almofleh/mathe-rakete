@@ -1,0 +1,54 @@
+@if (gradeNumber(); as g) {
+  @if (topic(); as t) {
+    <div class="lesson-page mx-auto">
+      <header class="d-flex align-items-center gap-3 mb-4">
+        <a class="btn btn-outline-primary btn-round" [routerLink]="['/klasse', g]" aria-label="Zurück zur Lektionsliste">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        </a>
+        <span class="lesson-icon"><i class="bi {{ t.icon }}" aria-hidden="true"></i></span>
+        <div class="min-w-0">
+          @if (chapterTitle(); as chapter) {
+            <div class="small text-muted-kid">Klasse {{ g }} · {{ chapter }}</div>
+          }
+          <h1 class="h3 mb-0">{{ t.title }}</h1>
+          <div class="text-muted-kid">z. B. {{ t.example }}</div>
+        </div>
+      </header>
+
+      <div class="row g-3">
+        @for (s of steps(); track s.id) {
+          <div class="col-6 col-md-3 ml-pop" [style.--i]="$index">
+            <button type="button" class="step-card card h-100 w-100 status-{{ s.status }}"
+                    [class.next]="s.id === next()" [class.quiet]="s.quiet" [class.is-test]="s.id === 'test'"
+                    (click)="start(s.id)">
+              <i class="bi {{ s.icon }} step-icon" aria-hidden="true"></i>
+              <span class="fw-bold fs-5">{{ s.label }}</span>
+              <small class="text-muted-kid">{{ s.hint }}</small>
+              <span class="step-stars" [attr.aria-label]="(s.stars ?? 0) + ' von 3 Sternen'">
+                @for (slot of starSlots; track slot) {
+                  <i class="bi" [class.bi-star-fill]="(s.stars ?? 0) >= slot" [class.bi-star]="(s.stars ?? 0) < slot" aria-hidden="true"></i>
+                }
+              </span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="text-center mt-4">
+        @if (next(); as step) {
+          <button type="button" class="btn btn-primary btn-lg" (click)="start(step)">
+            Los geht's <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          </button>
+        } @else {
+          <p class="fw-bold fs-5 mb-2"><i class="bi bi-trophy-fill text-warning" aria-hidden="true"></i> Lektion geschafft!</p>
+          <button type="button" class="btn btn-outline-primary btn-lg" (click)="start('test')">Test nochmal</button>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="text-center py-5">
+      <p class="lead">Diese Lektion gibt es (noch) nicht.</p>
+      <a class="btn btn-primary mt-3" [routerLink]="['/klasse', g]">Zur Lektionsliste</a>
+    </div>
+  }
+}
