@@ -24,6 +24,9 @@
       @for (y of g.horizontal; track $index) {
         <line x1="1" [attr.y1]="y" [attr.x2]="g.width - 1" [attr.y2]="y" class="grid-line" />
       }
+      @if (g.axis; as a) {
+        <line [attr.x1]="a.x1" [attr.y1]="a.y1" [attr.x2]="a.x2" [attr.y2]="a.y2" class="mirror-axis" />
+      }
     </svg>
   } @else if (angle(); as a) {
     <svg viewBox="0 0 240 190" aria-hidden="true">
@@ -71,6 +74,59 @@
         <line [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2" class="graph-line" />
         @for (p of l.lattice; track $index) {
           <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3.5" class="graph-point" />
+        }
+      }
+    </svg>
+  } @else if (numberLine(); as nl) {
+    <svg viewBox="0 0 320 84" class="wide" aria-hidden="true">
+      <line x1="12" y1="50" x2="310" y2="50" class="nl-line" />
+      <path d="M 304 45 L 312 50 L 304 55" class="nl-line nl-head" />
+      @for (t of nl.ticks; track $index) {
+        <line [attr.x1]="t.x" [attr.y1]="t.labelled ? 40 : 44" [attr.x2]="t.x" [attr.y2]="t.labelled ? 60 : 56" [class.nl-tick-long]="t.labelled" class="nl-tick" />
+        @if (t.labelled) {
+          <text [attr.x]="t.x" y="76" class="nl-label" text-anchor="middle">{{ t.label }}</text>
+        }
+      }
+      <line [attr.x1]="nl.arrow" y1="8" [attr.x2]="nl.arrow" y2="38" class="nl-arrow" />
+      <path [attr.d]="nl.arrowHead" class="nl-arrow nl-arrow-head" />
+    </svg>
+  } @else if (barChart(); as bc) {
+    <svg viewBox="0 0 300 190" class="wide" aria-hidden="true">
+      @for (g of bc.grid; track $index) {
+        <line [attr.x1]="bc.left" [attr.y1]="g.y" [attr.x2]="bc.right" [attr.y2]="g.y" class="grid-line" />
+        @if (g.label) {
+          <text [attr.x]="bc.left - 6" [attr.y]="g.labelY" class="axis-label" text-anchor="end">{{ g.label }}</text>
+        }
+      }
+      @for (b of bc.bars; track $index) {
+        <rect [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.width" [attr.height]="b.height" class="bar bar-{{ b.color }}" />
+        <text [attr.x]="b.center" [attr.y]="bc.bottom + 18" class="bar-label" text-anchor="middle">{{ b.label }}</text>
+      }
+      <line [attr.x1]="bc.left" [attr.y1]="bc.bottom" [attr.x2]="bc.right" [attr.y2]="bc.bottom" class="axis" />
+      <line [attr.x1]="bc.left" y1="8" [attr.x2]="bc.left" [attr.y2]="bc.bottom" class="axis" />
+    </svg>
+  } @else if (solid(); as s) {
+    <svg viewBox="0 0 200 170" aria-hidden="true">
+      @for (d of s.faces; track $index) {
+        <path [attr.d]="d" class="solid-face" />
+      }
+      @for (d of s.hidden; track $index) {
+        <path [attr.d]="d" class="solid-hidden" />
+      }
+      @for (d of s.edges; track $index) {
+        <path [attr.d]="d" class="solid-edge" />
+      }
+    </svg>
+  } @else if (urn(); as u) {
+    <svg [attr.viewBox]="'-4 0 ' + (u.width + 8) + ' 182'" [class.wide]="u.bags.length > 1" aria-hidden="true">
+      @for (bag of u.bags; track $index) {
+        <path [attr.d]="bag.outline" class="bag" />
+        <path [attr.d]="bag.tie" class="bag-tie" />
+        @for (ball of bag.balls; track $index) {
+          <circle [attr.cx]="ball.cx" [attr.cy]="ball.cy" [attr.r]="ball.r" class="ball ball-{{ ball.color }}" />
+        }
+        @if (bag.label) {
+          <text [attr.x]="bag.labelX" y="178" class="bar-label" text-anchor="middle">{{ bag.label }}</text>
         }
       }
     </svg>

@@ -15,8 +15,17 @@
     }
   }
 
+  // Zahlenstrahl und Diagramm brauchen Breite statt Höhe
+  svg.wide {
+    max-width: 28rem;
+  }
+
   &.compact svg {
     max-width: 8rem;
+  }
+
+  &.compact svg.wide {
+    max-width: 14rem;
   }
 }
 
@@ -33,6 +42,7 @@
 // Gitter
 .cell { fill: color-mix(in srgb, var(--ml-mint) 55%, white); }
 .grid-line { stroke: #c9c4dc; stroke-width: 1; }
+.mirror-axis { stroke: var(--ml-coral); stroke-width: 3; stroke-dasharray: 6 4; stroke-linecap: round; }
 
 // Winkel
 .ray { stroke: var(--ml-ink); stroke-width: 4; stroke-linecap: round; }
@@ -49,3 +59,34 @@
 .axis-name { font-size: 12px; font-style: italic; fill: var(--ml-ink); }
 .graph-line { stroke: var(--ml-primary); stroke-width: 3; stroke-linecap: round; }
 .graph-point { fill: var(--ml-coral); }
+
+// Zahlenstrahl
+.nl-line { stroke: var(--ml-ink); stroke-width: 2; fill: none; }
+.nl-tick { stroke: var(--ml-ink); stroke-width: 1.2; }
+.nl-tick-long { stroke-width: 2.2; }
+.nl-label { font-family: var(--ml-font-display); font-size: 12px; font-weight: 600; fill: var(--ml-ink); }
+.nl-arrow { stroke: var(--ml-coral); stroke-width: 3.5; stroke-linecap: round; fill: none; }
+.nl-arrow-head { stroke-linejoin: round; }
+
+// Säulendiagramm
+.bar { stroke: none; }
+.bar-0 { fill: var(--ml-sky); }
+.bar-1 { fill: var(--ml-mint); }
+.bar-2 { fill: var(--ml-sun); }
+.bar-3 { fill: var(--ml-coral); }
+.bar-4 { fill: var(--ml-primary); }
+.bar-label { font-size: 11px; font-weight: 700; fill: var(--ml-ink); }
+
+// Körper
+.solid-face { fill: color-mix(in srgb, var(--ml-sky) 22%, white); stroke: none; }
+.solid-edge { fill: none; stroke: var(--ml-ink); stroke-width: 2.5; stroke-linejoin: round; }
+.solid-hidden { fill: none; stroke: var(--ml-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+
+// Kugeln im Beutel
+.bag { fill: #f6efe3; stroke: #b08d57; stroke-width: 2.5; }
+.bag-tie { stroke: #b08d57; stroke-width: 5; stroke-linecap: round; }
+.ball { stroke: rgba(0, 0, 0, 0.25); stroke-width: 1; }
+.ball-rot { fill: var(--ml-coral); }
+.ball-blau { fill: var(--ml-sky); }
+.ball-gelb { fill: var(--ml-sun); }
+.ball-grün { fill: var(--ml-mint); }

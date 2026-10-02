@@ -1,4 +1,7 @@
+import { plain } from '../../models';
+import { Rational } from '../../math/rational';
 import { Rng } from '../../math/rng';
+import { quantityFormat } from '../task-helpers';
 import { GeneratedTask, TaskGenerator } from '../generator';
 import {
   addWithoutCarry,
@@ -20,6 +23,9 @@ import {
   TIMES,
   withDigits,
 } from './helpers';
+import { compareTask, placeValueByDifficulty } from './number-sense';
+import { timeSpanTask } from './time';
+import { cinema, discount, roundTrips, sacks, saving, seatsLeft, visitors, wordProblemTask } from './word-problems';
 import { commaToSmall, DECIMAL_UNITS, smallToComma, UNITS } from './units';
 
 const MAX_MILLION = 1_000_000;
@@ -179,7 +185,8 @@ function decisionDigit(n: number, place: number): number {
   return Math.floor(n / (place / 10)) % 10;
 }
 
-function roundingTask(rng: Rng, place: number, digits: number, mode: 'any' | 'five' | 'chain'): GeneratedTask {
+/** „4 387 ≈ ?“ – auch von Kl. 3 genutzt (dreistellig, `max` = 1 000). */
+export function roundingTask(rng: Rng, place: number, digits: number, mode: 'any' | 'five' | 'chain', max = MAX_MILLION): GeneratedTask {
   const n = sample(
     rng,
     (r) => withDigits(r, digits),
@@ -192,7 +199,8 @@ function roundingTask(rng: Rng, place: number, digits: number, mode: 'any' | 'fi
   const down = Math.floor(n / place) * place;
   const up = down + place;
   const digit = decisionDigit(n, place);
-  const distractors = [rounded === up ? down : up, roundTo(n, place * 10), rounded + place];
+  // auf 0 gerundet ist kein glaubwürdiger Fehler (353 → 0)
+  const distractors = [rounded === up ? down : up, roundTo(n, place * 10), rounded + place].filter((d) => d > 0);
   if (place >= 100) {
     distractors.push(roundTo(n, place / 10));
   }
@@ -207,7 +215,7 @@ function roundingTask(rng: Rng, place: number, digits: number, mode: 'any' | 'fi
       digit >= 5 ? 'Bei 5, 6, 7, 8, 9 wird aufgerundet.' : 'Bei 0, 1, 2, 3, 4 wird abgerundet.',
       `${expr(n)} ≈ ${expr(rounded)}`,
     ],
-    max: MAX_MILLION,
+    max,
   });
 }
 
@@ -260,10 +268,128 @@ export const k4UnitsDecimal = generator('k4-units-decimal', ({ difficulty, rng }
   }),
 );
 
+// ---- Große Zahlen -------------------------------------------------------------------------------
+
+/** Stellentafel bis 1 Million – nur drei Stellen sind besetzt, die Nullen muss das Kind selbst setzen (3 HT + 5 T + 2 Z = 305 020). */
+export const k4PlaceValue = generator('k4-place-value', ({ difficulty, rng }) =>
+  placeValueByDifficulty(rng, difficulty, { places: ['HT', 'ZT', 'T', 'H', 'Z', 'E'], sparse: 3, max: MAX_MILLION }),
+);
+
+export const k4Compare = generator('k4-compare', ({ difficulty, rng }) => compareTask(rng, difficulty, { min: 1000, max: MAX_MILLION, step: 1000 }));
+
+/** Zeitspannen über mehrere Stunden, zuletzt minutengenau (7:48 Uhr → 11:13 Uhr) */
+export const k4TimeSpan = generator('k4-time-span', ({ difficulty, rng }) => {
+  const [start, duration] = byDifficulty<[number, number]>(difficulty, {
+    easy: () => [rng.int(7, 14) * 60 + 15 * rng.int(0, 3), 60 * rng.int(1, 4) + 15 * rng.int(1, 3)],
+    medium: () => [rng.int(7, 13) * 60 + 5 * rng.int(1, 11), 60 * rng.int(2, 5) + 5 * rng.int(1, 11)],
+    hard: () => [rng.int(6, 12) * 60 + rng.int(1, 59), 60 * rng.int(1, 6) + rng.int(1, 59)],
+  });
+  return timeSpanTask(start, duration);
+});
+
+export const k4WordProblems = generator('k4-word-problems', ({ difficulty, rng }) =>
+  wordProblemTask(
+    rng,
+    byDifficulty(difficulty, {
+      easy: () => [discount, visitors(1000, 20_000)],
+      medium: () => [cinema, sacks, saving],
+      hard: () => [seatsLeft, roundTrips, cinema],
+    }),
+    MAX_MILLION,
+  ),
+);
+
+// ---- Maßstab ----------------------------------------------------------------------------------
+
+/** Wirklichkeit in m bzw. km (bei 1 : 100 000) */
+function realUnit(scale: number): { unit: 'm' | 'km'; cm: number } {
+  return scale >= 100_000 ? { unit: 'km', cm: 100_000 } : { unit: 'm', cm: 100 };
+}
+
+export const k4Scale = generator('k4-scale', ({ difficulty, rng }) => {
+  const scale = byDifficulty(difficulty, {
+    easy: () => 100,
+    medium: () => rng.pick([1000, 10_000]),
+    hard: () => rng.pick([10_000, 100_000]),
+  });
+  const { unit, cm } = realUnit(scale);
+  const map = rng.int(2, 9);
+  const real = (map * scale) / cm;
+  const instruction = `Maßstab 1 : ${expr(scale)}`;
+  if (difficulty === 'hard' && rng.chance(0.5)) {
+    // Rückwärts: Wirklichkeit → Karte
+    return integerTask({
+      instruction,
+      prompt: `In Wirklichkeit: ${expr(real)} ${unit}. Auf der Karte: ?`,
+      answer: map,
+      format: (n) => quantityFormat('cm')(Rational.of(n)),
+      // Stelle verrutscht, Zahl übernommen
+      distractors: [map * 10, real, map + 1, map * 100],
+      explanation: [`1 cm auf der Karte sind ${expr(scale)} cm = ${expr(scale / cm)} ${unit} in Wirklichkeit.`, `${expr(real)} ${unit} ${DIVIDED} ${expr(scale / cm)} ${unit} = ${map} → ${map} cm`],
+    });
+  }
+  return integerTask({
+    instruction,
+    prompt: `Auf der Karte: ${map} cm. In Wirklichkeit: ?`,
+    answer: real,
+    format: (n) => quantityFormat(unit)(Rational.of(n)),
+    // eine Null zu viel/wenig, Maßstab vergessen
+    distractors: [real * 10, real / 10, map, real * 100],
+    explanation: [`1 cm auf der Karte sind ${expr(scale)} cm in Wirklichkeit.`, `${map} cm ${TIMES} ${expr(scale)} = ${expr(map * scale)} cm = ${expr(real)} ${unit}`],
+  });
+});
+
+// ---- Rechteck: Fläche und Umfang ------------------------------------------------------------------
+
+export const k4Rectangle = generator('k4-rectangle', ({ difficulty, rng }) => {
+  const unit = rng.pick(['cm', 'm']);
+  const len = quantityFormat(unit);
+  const sq = quantityFormat(`${unit}²`);
+  const [a, b] = sample(rng, (r) => [r.int(3, difficulty === 'easy' ? 9 : 15), r.int(2, difficulty === 'easy' ? 8 : 12)], ([a, b]) => a > b);
+  const area = a * b;
+  const perimeter = 2 * (a + b);
+  const asked = rng.pick(['area', 'perimeter'] as const);
+  const task = (prompt: string, answer: Rational, wrong: Rational[], fmt: typeof len, otherFmt: typeof len, explanation: string[]): GeneratedTask => ({
+    prompt: { math: plain(prompt) },
+    answer: fmt(answer),
+    // dieselbe Zahl mit falscher Einheit ist auch falsch (cm statt cm²)
+    distractors: [...wrong.filter((w) => w.sign > 0 && !w.equals(answer)).map(fmt), otherFmt(answer)],
+    explanation: explanation.map(plain),
+  });
+  return byDifficulty(difficulty, {
+    easy: () =>
+      asked === 'area'
+        ? task(`Ein Rechteck ist ${a} ${unit} lang und ${b} ${unit} breit. Wie groß ist der Flächeninhalt?`, Rational.of(area), [Rational.of(perimeter), Rational.of(a + b)], sq, len, [`A = Länge ${TIMES} Breite = ${a} ${TIMES} ${b} = ${area} ${unit}²`])
+        : task(`Ein Rechteck ist ${a} ${unit} lang und ${b} ${unit} breit. Wie lang ist der Umfang?`, Rational.of(perimeter), [Rational.of(area), Rational.of(a + b)], len, sq, [`U = ${a} + ${b} + ${a} + ${b} = ${perimeter} ${unit}`]),
+    medium: () => {
+      if (rng.chance(0.4)) {
+        // Quadrat
+        return asked === 'area'
+          ? task(`Ein Quadrat hat ${a} ${unit} lange Seiten. Wie groß ist der Flächeninhalt?`, Rational.of(a * a), [Rational.of(4 * a), Rational.of(2 * a)], sq, len, [`A = ${a} ${TIMES} ${a} = ${a * a} ${unit}²`])
+          : task(`Ein Quadrat hat ${a} ${unit} lange Seiten. Wie lang ist der Umfang?`, Rational.of(4 * a), [Rational.of(a * a), Rational.of(2 * a)], len, sq, [`U = 4 ${TIMES} ${a} = ${4 * a} ${unit}`]);
+      }
+      return asked === 'area'
+        ? task(`Ein Rechteck ist ${a} ${unit} lang und ${b} ${unit} breit. Wie groß ist der Flächeninhalt?`, Rational.of(area), [Rational.of(perimeter), Rational.of(area + a)], sq, len, [`A = ${a} ${TIMES} ${b} = ${area} ${unit}²`])
+        : task(`Ein Rechteck ist ${a} ${unit} lang und ${b} ${unit} breit. Wie lang ist der Umfang?`, Rational.of(perimeter), [Rational.of(area), Rational.of(a + b), Rational.of(2 * a + b)], len, sq, [`U = 2 ${TIMES} (${a} + ${b}) = ${perimeter} ${unit}`]);
+    },
+    // Umkehraufgabe: fehlende Seite
+    hard: () =>
+      asked === 'area'
+        ? task(`Ein Rechteck ist ${a} ${unit} lang und hat einen Flächeninhalt von ${area} ${unit}². Wie breit ist es?`, Rational.of(b), [Rational.of(area - a), Rational.of(b + 1), Rational.of(b - 1)], len, sq, [`A = Länge ${TIMES} Breite`, `Breite = ${area} ${DIVIDED} ${a} = ${b} ${unit}`])
+        : task(`Ein Rechteck ist ${a} ${unit} lang und hat einen Umfang von ${perimeter} ${unit}. Wie breit ist es?`, Rational.of(b), [Rational.of(perimeter - a), Rational.of(perimeter - 2 * a), Rational.of(b + 1)], len, sq, [`Länge + Breite = ${perimeter} ${DIVIDED} 2 = ${a + b} ${unit}`, `Breite = ${a + b} − ${a} = ${b} ${unit}`]),
+  });
+});
+
 export const GRADE_4_GENERATORS: readonly TaskGenerator[] = [
+  k4PlaceValue,
+  k4Compare,
   k4WrittenAddSub,
   k4WrittenMul,
   k4WrittenDiv,
   k4Rounding,
   k4UnitsDecimal,
+  k4TimeSpan,
+  k4Scale,
+  k4Rectangle,
+  k4WordProblems,
 ];

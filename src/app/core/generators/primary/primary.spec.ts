@@ -91,7 +91,7 @@ function independentCheck(task: Task): Check {
   const text = task.prompt.math.value;
   const instruction = task.prompt.instruction ?? '';
 
-  if (task.topicId === 'k1-compare') {
+  if (task.topicId.endsWith('-compare')) {
     const [l, r] = text.split(' ○ ');
     const diff = evaluate(l) - evaluate(r);
     const symbols = ['<', '=', '>'];
@@ -102,6 +102,55 @@ function independentCheck(task: Task): Check {
     const factor = m[1] === 'Das Doppelte' ? 2 : 0.5;
     const expected = m[3] === '?' ? parseNumber(m[2]) * factor : parseNumber(m[3]) / factor;
     return { expected, parse: parseNumber };
+  }
+  if (task.topicId.endsWith('-place-value')) {
+    // „3 HT + 13 Z + □ E = …“ → „3 · 100000 + 13 · 10 + □ · 1 = …“
+    const values: Record<string, number> = { HT: 100_000, ZT: 10_000, T: 1000, H: 100, Z: 10, E: 1 };
+    return { expected: solveEquation(text.replace(/(\d+|□) (HT|ZT|T|H|Z|E)\b/g, (_, n, p) => `${n} · ${values[p]}`)), parse: parseNumber };
+  }
+  if (task.topicId.endsWith('-neighbors')) {
+    const named = text.match(/^Der (Nachfolger|Vorgänger) von (\S+) ist \?$/);
+    if (named) return { expected: parseNumber(named[2]) + (named[1] === 'Nachfolger' ? 1 : -1), parse: parseNumber };
+    if (instruction === 'Welche Zahl liegt dazwischen?' || instruction === 'Welche Zahl liegt genau in der Mitte?') {
+      const [left, , right] = text.split(' < ').map(parseNumber);
+      if (instruction === 'Welche Zahl liegt dazwischen?') expect(right - left).toBe(2);
+      return { expected: (left + right) / 2, parse: parseNumber };
+    }
+    const place = instruction === 'Nachbarzehner' ? 10 : 100;
+    const [left, middle, right] = text.split(' < ');
+    const n = parseNumber(middle);
+    // ? links: der kleinere Nachbar, ? rechts: der größere – und der gezeigte Nachbar muss stimmen
+    if (left === '?') {
+      expect(parseNumber(right)).toBe(Math.ceil(n / place) * place);
+      return { expected: Math.floor(n / place) * place, parse: parseNumber };
+    }
+    expect(parseNumber(left)).toBe(Math.floor(n / place) * place);
+    return { expected: Math.ceil(n / place) * place, parse: parseNumber };
+  }
+  if (task.topicId.endsWith('-time-span')) {
+    const [, h1, m1, h2, m2] = text.match(/^(\d+):(\d+) Uhr → (\d+):(\d+) Uhr$/)!.map(Number);
+    return { expected: h2 * 60 + m2 - (h1 * 60 + m1), parse: parseQuantity };
+  }
+  if (task.topicId.endsWith('-time-point')) {
+    const [, h, m, sign, amount] = text.match(/^(\d+):(\d+) Uhr ([+−]) (.+) = \?$/)!;
+    const delta = parseQuantity(amount) * (sign === '+' ? 1 : -1);
+    return { expected: Number(h) * 60 + Number(m) + delta, parse: parseClock };
+  }
+  if (task.topicId.endsWith('-calendar')) {
+    return calendarCheck(text);
+  }
+  if (task.topicId.endsWith('-scale')) {
+    const scale = parseNumber(instruction.replace('Maßstab 1 : ', ''));
+    const forward = text.match(/^Auf der Karte: (.+)\. In Wirklichkeit: \?$/);
+    if (forward) return { expected: parseQuantity(forward[1]) * scale, parse: parseQuantity };
+    const back = text.match(/^In Wirklichkeit: (.+)\. Auf der Karte: \?$/)!;
+    return { expected: parseQuantity(back[1]) / scale, parse: (c) => (c.endsWith(' cm') ? parseQuantity(c) : NaN) };
+  }
+  if (task.topicId.endsWith('-rectangle')) {
+    return rectangleCheck(text);
+  }
+  if (task.topicId.endsWith('-word-problems')) {
+    return { expected: solveWordProblem(text), parse: (c) => parseNumber(c.replace(/ (€|m|kg)$/, '')) };
   }
   if (task.topicId === 'k3-div-remainder') {
     const [dividend, divisor] = text.replace(' = ?', '').split(' : ').map(parseNumber);
@@ -136,11 +185,93 @@ function independentCheck(task: Task): Check {
   return { expected: solveEquation(text), parse: parseNumber };
 }
 
+/** „9:15 Uhr“ → Minuten seit Mitternacht */
+function parseClock(text: string): number {
+  const m = text.match(/^(\d+):(\d{2}) Uhr$/);
+  if (!m) throw new Error(`Keine Uhrzeit: ${text}`);
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** Kalender: Antwort als Index in der Liste (bzw. Tageszahl) nachrechnen */
+function calendarCheck(text: string): Check {
+  const cyc = (list: string[], from: string, steps: number) => {
+    const i = list.indexOf(from);
+    expect(i).toBeGreaterThanOrEqual(0);
+    return { expected: (((i + steps) % list.length) + list.length) % list.length, parse: (c: string) => list.indexOf(c) };
+  };
+  let m = text.match(/^Welcher (Tag|Monat) kommt (nach|vor) (\S+)\?$/);
+  if (m) return cyc(m[1] === 'Tag' ? WEEKDAYS : MONTHS, m[3], m[2] === 'nach' ? 1 : -1);
+  m = text.match(/^Heute ist (\S+)\. Welcher Tag (ist in|war vor) (\d+) Tagen\?$/);
+  if (m) return cyc(WEEKDAYS, m[1], Number(m[3]) * (m[2] === 'ist in' ? 1 : -1));
+  m = text.match(/^Welcher Monat ist (\d+) Monate nach (\S+)\?$/);
+  if (m) return cyc(MONTHS, m[2], Number(m[1]));
+  m = text.match(/^Wie viele Tage hat der (\S+)\?$/);
+  if (m) {
+    expect(m[1]).not.toBe('Februar');
+    return { expected: MONTH_DAYS[MONTHS.indexOf(m[1])], parse: parseNumber };
+  }
+  throw new Error(`Unbekannte Kalenderfrage: ${text}`);
+}
+
+/** Rechteck/Quadrat in Worten – Zahl UND Einheit (cm vs. cm²) müssen stimmen */
+function rectangleCheck(text: string): Check {
+  const withUnit = (value: number, unit: string) => ({
+    expected: value,
+    parse: (c: string) => (c.endsWith(` ${unit}`) ? parseNumber(c.slice(0, -unit.length - 1)) : NaN),
+  });
+  let m = text.match(/^Ein Rechteck ist (\d+) (cm|m) lang und (\d+) (?:cm|m) breit\. Wie (groß ist der Flächeninhalt|lang ist der Umfang)\?$/);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[3])];
+    return m[4].includes('Fläche') ? withUnit(a * b, `${m[2]}²`) : withUnit(2 * (a + b), m[2]);
+  }
+  m = text.match(/^Ein Quadrat hat (\d+) (cm|m) lange Seiten\. Wie (groß ist der Flächeninhalt|lang ist der Umfang)\?$/);
+  if (m) return m[3].includes('Fläche') ? withUnit(Number(m[1]) ** 2, `${m[2]}²`) : withUnit(4 * Number(m[1]), m[2]);
+  m = text.match(/^Ein Rechteck ist (\d+) (cm|m) lang und hat einen (Flächeninhalt|Umfang) von (\d+) (?:cm|m)²?\. Wie breit ist es\?$/);
+  if (m) {
+    const [a, given] = [Number(m[1]), Number(m[4])];
+    return withUnit(m[3] === 'Flächeninhalt' ? given / a : given / 2 - a, m[2]);
+  }
+  throw new Error(`Unbekannte Rechteck-Aufgabe: ${text}`);
+}
+
+/** Sachaufgabe: Rechnung aus den Signalwörtern des Textes ableiten (unabhängig von den Vorlagen im Code) */
+function solveWordProblem(text: string): number {
+  const n = numbersIn(text);
+  const has = (...words: string[]) => words.every((w) => text.includes(w));
+  if (has('dazu', 'verschenkt')) return n[0] + n[1] - n[2];
+  if (has('dazu')) return n[0] + n[1];
+  if (has('steigen', 'aus')) return n[0] - n[1];
+  if (has('mehr als')) return n[0] - n[1];
+  if (has('In einer Packung')) return n[0] * n[1];
+  if (has('Gruppen zu je')) return n[0] / n[1];
+  if (has('Rückgeld')) return n.length === 3 ? n[2] - n[0] * n[1] : n[1] - n[0];
+  if (has('In jeder der')) return n[0] * n[1];
+  if (has('gleichmäßig')) return n[0] / n[1];
+  if (has('fehlen noch')) return n[0] - n[1];
+  if (has('Besucher', 'zusammen')) return n[0] + n[1];
+  if (has('Reihen mit je', 'verkauft')) return n[0] * n[1] - n[2];
+  if (has('Reihen mit je')) return n[0] * n[1];
+  if (has('Säcke zu je')) return n[0] / n[1];
+  if (has('jeden Monat')) return n[0] * n[1];
+  if (has('billiger')) return n[0] - n[1];
+  if (has('wieder zurück')) return 2 * n[0] * n[1];
+  throw new Error(`Unbekannte Sachaufgabe: ${text}`);
+}
+
 /** Größte erlaubte Zahl in Aufgabe und Antworten (Zahlenraum der Klasse). */
 const NUMBER_RANGE: Record<string, number> = {
   'k1-add-10': 10, 'k1-sub-10': 10, 'k1-add-20': 20, 'k1-sub-20': 20, 'k1-missing': 20, 'k1-double-half': 20, 'k1-compare': 20,
   'k2-add-100': 100, 'k2-sub-100': 100, 'k2-times-table': 100, 'k2-div': 100,
   'k3-add-1000': 1000, 'k3-sub-1000': 1000, 'k3-times-tens': 1000, 'k3-div-remainder': 100,
+  'k1-neighbors': 20,
+  'k2-word-problems': 100, 'k3-word-problems': 1000, 'k4-word-problems': 1_000_000,
+  'k2-place-value': 100, 'k2-neighbors': 100, 'k2-compare': 100, 'k2-complete': 100,
+  'k4-place-value': 1_000_000, 'k4-compare': 1_000_000,
+  'k3-place-value': 1000, 'k3-neighbors': 1000, 'k3-compare': 1000, 'k3-rounding': 1000, 'k3-complete': 1000, 'k3-div-halfwritten': 1000,
 };
 
 function numbersIn(text: string): number[] {
@@ -225,6 +356,38 @@ describe('difficulty levels', () => {
       const [a, b] = operands(t);
       expect((a % 10) + (b % 10)).toBeGreaterThanOrEqual(10);
     }
+  });
+
+  it('rounding never offers 0 as an answer', () => {
+    for (const id of ['k3-rounding', 'k4-rounding']) {
+      for (const difficulty of DIFFICULTIES) {
+        for (const t of tasks(id, difficulty)) expect(t.choices.map((c) => c.display.value)).not.toContain('0');
+      }
+    }
+  });
+
+  it('k3-complete easy fills up to the next hundred', () => {
+    for (const t of tasks('k3-complete', 'easy')) {
+      const [n, target] = operands(t);
+      expect(target).toBe(Math.ceil(n / 100) * 100);
+    }
+  });
+
+  it('k3-div-halfwritten hard needs regrouping (tens not divisible)', () => {
+    for (const t of tasks('k3-div-halfwritten', 'hard')) {
+      const [dividend, divisor] = operands(t);
+      expect(Math.floor(dividend / 10) % divisor).not.toBe(0);
+    }
+  });
+
+  it('k3-time-span medium crosses the full hour, hard takes more than an hour', () => {
+    const minutes = (t: Task) => {
+      const [h1, m1, h2, m2] = operands(t);
+      return { crosses: h1 !== h2, duration: h2 * 60 + m2 - (h1 * 60 + m1) };
+    };
+    for (const t of tasks('k3-time-span', 'easy')) expect(minutes(t).crosses).toBe(false);
+    for (const t of tasks('k3-time-span', 'medium')) expect(minutes(t)).toMatchObject({ crosses: true });
+    for (const t of tasks('k3-time-span', 'hard')) expect(minutes(t).duration).toBeGreaterThan(60);
   });
 
   it('k4-written-div hard has a zero inside the quotient', () => {

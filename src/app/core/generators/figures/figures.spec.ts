@@ -20,6 +20,8 @@ const frac = (c: string) => {
   return m ? [Number(m[1]), Number(m[2])] : null;
 };
 const gcdOf = (a: number, b: number): number => (b === 0 ? a : gcdOf(b, a % b));
+/** „1 000“ (mit schmalem Leerzeichen) → 1000; alles andere als eine ganze Zahl → NaN */
+const readInt = (c: string) => (/^[\d\s\u202f]+$/.test(c) ? Number(c.replace(/[\s\u202f]/g, '')) : NaN);
 
 function perimeterOf(cells: readonly (readonly [number, number])[]): number {
   const set = new Set(cells.map(([c, r]) => `${c},${r}`));
@@ -47,6 +49,17 @@ function judgeFor(task: Task): (choice: string) => boolean {
     case 'grid': {
       const cellsInside = figure.cells.every(([c, r]) => c >= 0 && r >= 0 && c < figure.columns && r < figure.rows);
       expect(cellsInside).toBe(true);
+      if (figure.axis) {
+        // Spiegelseite muss eine Teilmenge des Spiegelbilds sein; gesucht: wie viele fehlen
+        const { orientation, at } = figure.axis;
+        const before = figure.cells.filter(([c, r]) => (orientation === 'vertical' ? c : r) < at);
+        const after = new Set(figure.cells.filter(([c, r]) => (orientation === 'vertical' ? c : r) >= at).map(([c, r]) => `${c},${r}`));
+        const mirrored = before.map(([c, r]) => (orientation === 'vertical' ? `${2 * at - 1 - c},${r}` : `${c},${2 * at - 1 - r}`));
+        expect([...after].every((k) => mirrored.includes(k))).toBe(true);
+        const missing = mirrored.filter((k) => !after.has(k)).length;
+        expect(missing).toBeGreaterThan(0);
+        return (c) => readInt(c) === missing;
+      }
       return question.includes('Flächeninhalt') ? (c) => c === `${figure.cells.length} cm²` : (c) => c === `${perimeterOf(figure.cells)} cm`;
     }
     case 'angle':
@@ -66,6 +79,72 @@ function judgeFor(task: Task): (choice: string) => boolean {
         const f = frac(c);
         return !!f && f[0] * n === target * f[1];
       };
+    }
+    case 'numberline': {
+      // fair: Pfeil auf einem Strich, aber nicht auf einer beschrifteten Zahl
+      expect((figure.marked - figure.start) % figure.step).toBe(0);
+      expect(figure.marked % figure.labelEvery).not.toBe(0);
+      expect(figure.marked > figure.start && figure.marked < figure.end).toBe(true);
+      return (c) => readInt(c) === figure.marked;
+    }
+    case 'bars': {
+      // ablesbar: jede Säule endet auf einer Hilfslinie, alle verschieden
+      expect(figure.bars.every((b) => b.value > 0 && b.value <= figure.max && b.value % figure.gridStep === 0)).toBe(true);
+      expect(new Set(figure.bars.map((b) => b.value)).size).toBe(figure.bars.length);
+      const value = (label: string) => figure.bars.find((b) => b.label === label)!.value;
+      const named = [...question.matchAll(/„([^“]+)“/g)].map((m) => m[1]);
+      const expected = question.includes('insgesamt')
+        ? figure.bars.reduce((s, b) => s + b.value, 0)
+        : named.length === 2
+          ? value(named[0]) - value(named[1])
+          : value(named[0]);
+      expect(expected).toBeGreaterThan(0);
+      return (c) => readInt(c) === expected;
+    }
+    case 'solid': {
+      const names: Record<string, string> = { cube: 'Würfel', cuboid: 'Quader', pyramid: 'Pyramide', prism: 'Prisma', cylinder: 'Zylinder', cone: 'Kegel', sphere: 'Kugel' };
+      // Euler: Ecken − Kanten + Flächen = 2 – unabhängig vom Generator nachgerechnet
+      const solids: Record<string, { Ecken: number; Kanten: number; Flächen: number }> = {
+        cube: { Ecken: 8, Kanten: 12, Flächen: 6 },
+        cuboid: { Ecken: 8, Kanten: 12, Flächen: 6 },
+        pyramid: { Ecken: 5, Kanten: 8, Flächen: 5 },
+        prism: { Ecken: 6, Kanten: 9, Flächen: 5 },
+      };
+      for (const c of Object.values(solids)) expect(c.Ecken - c.Kanten + c.Flächen).toBe(2);
+      const roundFaces: Record<string, number> = { cylinder: 3, cone: 2, sphere: 1 };
+      if (question === 'Wie heißt dieser Körper?') return (c) => c === names[figure.shape];
+      const what = question.match(/^Wie viele (Ecken|Kanten|Flächen) hat/)![1] as 'Ecken' | 'Kanten' | 'Flächen';
+      const expected = solids[figure.shape]?.[what] ?? (what === 'Flächen' ? roundFaces[figure.shape] : NaN);
+      return (c) => readInt(c) === expected;
+    }
+    case 'urn': {
+      const count = (bag: number, color: string) => figure.bags[bag].balls.find((b) => b.color === color)?.count ?? 0;
+      const total = (bag: number) => figure.bags[bag].balls.reduce((s, b) => s + b.count, 0);
+      expect(figure.bags.every((_, i) => total(i) <= 25)).toBe(true);
+      const event = question.match(/Sie ist (.+)\. Das ist …$/);
+      if (event) {
+        const colors = event[1].split(' oder ');
+        const hits = colors.reduce((s, c) => s + count(0, c), 0);
+        const expected = hits === 0 ? 'unmöglich' : hits === total(0) ? 'sicher' : 'möglich';
+        return (c) => c === expected;
+      }
+      const more = question.match(/^Wie viele (\S+)e Kugeln musst du dazulegen/);
+      if (more) {
+        const other = figure.bags[0].balls.find((b) => b.color !== more[1])!;
+        return (c) => readInt(c) === other.count - count(0, more[1]);
+      }
+      if (question.includes('In welchem Beutel')) {
+        const [pA, pB] = [count(0, 'rot') / total(0), count(1, 'rot') / total(1)];
+        const expected = Math.abs(pA - pB) < 1e-9 ? 'gleich wahrscheinlich' : pA > pB ? 'Beutel A' : 'Beutel B';
+        return (c) => c === expected;
+      }
+      const balls = [...figure.bags[0].balls].sort((a, b) => b.count - a.count);
+      if (question.includes('am seltensten')) {
+        expect(balls.at(-1)!.count).toBeLessThan(balls.at(-2)!.count);
+        return (c) => c === balls.at(-1)!.color;
+      }
+      if (balls[0].count === balls[1].count) return (c) => c === 'gleich wahrscheinlich';
+      return (c) => c === balls[0].color;
     }
     case 'graph': {
       const [line] = figure.lines;
@@ -108,7 +187,25 @@ function verify(task: Task): string | null {
 
 describe('figure generators', () => {
   it('have a generator for every picture topic', () => {
-    expect(FIGURE_TOPICS.map((t) => t.id).sort()).toEqual(['k2-clock', 'k3-grid-area', 'k5-angles', 'k5-fraction-picture', 'k8-graph-reading']);
+    expect(FIGURE_TOPICS.map((t) => t.id).sort()).toEqual([
+      'k1-number-line',
+      'k2-clock',
+      'k2-data',
+      'k2-number-line',
+      'k3-chance',
+      'k3-data',
+      'k3-grid-area',
+      'k3-number-line',
+      'k3-solids',
+      'k3-symmetry',
+      'k4-chance',
+      'k4-data',
+      'k4-number-line',
+      'k4-symmetry',
+      'k5-angles',
+      'k5-fraction-picture',
+      'k8-graph-reading',
+    ]);
     expect(FIGURE_TOPICS.every((t) => registry.has(t.id))).toBe(true);
   });
 
@@ -123,12 +220,13 @@ describe('figure generators', () => {
             problems.push(`Seed ${seed}: ${result.problem}`);
             continue;
           }
-          variants.add(JSON.stringify(result.task.prompt.figure));
+          variants.add(JSON.stringify(result.task.prompt.figure) + result.task.prompt.math.value);
           const problem = verify(result.task);
           if (problem) problems.push(`Seed ${seed}: ${problem}`);
         }
         expect(problems).toEqual([]);
-        expect(variants.size).toBeGreaterThanOrEqual(8);
+        // Körper gibt es nur sieben – dort reichen fünf verschiedene Bild-Frage-Paare
+        expect(variants.size).toBeGreaterThanOrEqual(topic.id.endsWith('-solids') ? 5 : 8);
       });
     }
   }
@@ -164,6 +262,22 @@ describe('FigureView', () => {
     // y = x geht durch die Ecken des Bereichs (−5|−5) und (5|5)
     expect(Number(line.getAttribute('x1'))).toBeCloseTo(10);
     expect(Number(line.getAttribute('y1'))).toBeCloseTo(210);
+  });
+
+  it('draws the number line with labels and the arrow', async () => {
+    const el = await render({ kind: 'numberline', start: 300, end: 400, step: 10, labelEvery: 50, marked: 370 });
+    expect(el.querySelectorAll('.nl-tick').length).toBe(11);
+    expect([...el.querySelectorAll('.nl-label')].map((t) => t.textContent)).toEqual(['300', '350', '400']);
+    // 370 liegt bei 70 % der Strecke 20…300
+    expect(Number(el.querySelector('line.nl-arrow')!.getAttribute('x1'))).toBeCloseTo(216);
+  });
+
+  it('draws one bar per answer, scaled to the axis, without printing the values', async () => {
+    const el = await render({ kind: 'bars', bars: [{ label: 'Hund', value: 5 }, { label: 'Katze', value: 10 }], max: 10, gridStep: 1, labelStep: 1 });
+    const bars = [...el.querySelectorAll('rect.bar')];
+    expect(bars.length).toBe(2);
+    expect(Number(bars[1].getAttribute('height'))).toBeCloseTo(2 * Number(bars[0].getAttribute('height')));
+    expect(el.querySelector('[role="img"]')!.getAttribute('aria-label')).not.toMatch(/\d{2}/);
   });
 
   it('describes the picture for screen readers without giving away the time', async () => {

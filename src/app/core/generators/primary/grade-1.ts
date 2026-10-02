@@ -16,6 +16,7 @@ import {
   PLUS,
   sample,
 } from './helpers';
+import { betweenTask, RELATION_WORDS, RELATIONS, successorTask } from './number-sense';
 
 const MAX_10 = 10;
 const MAX_20 = 20;
@@ -214,13 +215,6 @@ export const k1DoubleHalf = generator('k1-double-half', ({ difficulty, rng }) =>
       });
 });
 
-const RELATIONS = ['<', '>', '='] as const;
-const RELATION_WORDS: Record<(typeof RELATIONS)[number], string> = {
-  '<': 'ist kleiner als',
-  '>': 'ist größer als',
-  '=': 'ist gleich',
-};
-
 export const k1Compare = generator('k1-compare', ({ difficulty, rng }) => {
   const equal = rng.chance(difficulty === 'hard' ? 0.25 : 0.15);
   let leftText: string;
@@ -256,6 +250,16 @@ export const k1Compare = generator('k1-compare', ({ difficulty, rng }) => {
   };
 });
 
+export const k1Neighbors = generator('k1-neighbors', ({ difficulty, rng }) =>
+  byDifficulty(difficulty, {
+    // Vorgänger und Nachfolger bis 10, dann bis 20
+    easy: () => (rng.chance(0.5) ? successorTask(rng.int(0, 9), true, MAX_10) : successorTask(rng.int(1, 10), false, MAX_10)),
+    medium: () => (rng.chance(0.5) ? successorTask(rng.int(9, 19), true, MAX_20) : successorTask(rng.int(10, 20), false, MAX_20)),
+    // 14 < ? < 16
+    hard: () => betweenTask(rng, MAX_20),
+  }),
+);
+
 export const GRADE_1_GENERATORS: readonly TaskGenerator[] = [
   k1Add10,
   k1Sub10,
@@ -264,4 +268,5 @@ export const GRADE_1_GENERATORS: readonly TaskGenerator[] = [
   k1Missing,
   k1DoubleHalf,
   k1Compare,
+  k1Neighbors,
 ];

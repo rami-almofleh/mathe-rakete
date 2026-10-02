@@ -41,14 +41,17 @@ describe('GradePage (Lektionsliste)', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
     expect([...el.querySelectorAll('.chapter-title')].map((h) => h.textContent?.trim())).toEqual([
+      'Zahlen bis 1 000',
       'Plus und Minus bis 1 000',
       'Mal und geteilt',
       'Größen',
       'Geometrie',
+      'Daten',
+      'Sachaufgaben',
     ]);
-    expect(el.querySelectorAll('a.lesson-row').length).toBe(6);
-    expect(el.querySelector('a.lesson-row')?.getAttribute('href')).toBe('/klasse/3/lektion/k3-add-1000');
-    expect(el.querySelectorAll('.lesson-row .seg').length).toBe(24);
+    expect(el.querySelectorAll('a.lesson-row').length).toBe(23);
+    expect(el.querySelector('a.lesson-row')?.getAttribute('href')).toBe('/klasse/3/lektion/k3-place-value');
+    expect(el.querySelectorAll('.lesson-row .seg').length).toBe(23 * 4);
     expect(el.querySelector('.free-practice')?.getAttribute('href')).toBe('/klasse/3/frei');
   });
 
@@ -67,7 +70,7 @@ describe('GradePage (Lektionsliste)', () => {
     const fixture = TestBed.createComponent(GradePage);
     fixture.componentRef.setInput('grade', '3');
     await fixture.whenStable();
-    const row = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.lesson-row')].find((r) => r.textContent?.includes('Größen umrechnen'))!;
+    const row = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.lesson-row')].find((r) => r.textContent?.includes('Größen gemischt'))!;
     expect(row.querySelectorAll('.seg-done').length).toBe(1);
     expect(row.textContent).toContain('Zuletzt geübt');
   });

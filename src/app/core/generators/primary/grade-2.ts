@@ -1,4 +1,6 @@
-import { TaskGenerator } from '../generator';
+import { plain } from '../../models';
+import { numberAnswer, textAnswer } from '../answers';
+import { GeneratedTask, TaskGenerator } from '../generator';
 import { additionTask, divisionTask, multiplicationTask, subtractionTask } from './arithmetic';
 import {
   borrowCount,
@@ -16,6 +18,8 @@ import {
   sample,
   TIMES,
 } from './helpers';
+import { getAndGive, getMore, getOff, groups, howManyMore, packs, wordProblemTask } from './word-problems';
+import { compareTask, completeTask, middleTask, neighborTask, placeValueByDifficulty, successorByBoundary } from './number-sense';
 import { bigToSmall, formatMixed, mixedToSmall, smallToBig, smallToMixed, unitTask, UNITS } from './units';
 
 const MAX_100 = 100;
@@ -220,4 +224,165 @@ export const k2Length = generator('k2-length', ({ difficulty, rng }) =>
   }),
 );
 
-export const GRADE_2_GENERATORS: readonly TaskGenerator[] = [k2Add100, k2Sub100, k2TimesTable, k2Div, k2Money, k2Length];
+// ---- Zahlen bis 100 ----------------------------------------------------------------------------
+
+export const k2PlaceValue = generator('k2-place-value', ({ difficulty, rng }) =>
+  placeValueByDifficulty(rng, difficulty, { places: ['Z', 'E'], max: MAX_100 }),
+);
+
+export const k2Neighbors = generator('k2-neighbors', ({ difficulty, rng }) =>
+  byDifficulty(difficulty, {
+    // Vorgänger und Nachfolger, gern an der Zehnergrenze (39 → 40)
+    easy: () => successorByBoundary(rng, MAX_100),
+    // ? < 47 < 50
+    medium: () => neighborTask(rng, 10, 11, MAX_100),
+    // 40 < ? < 50 – genau in der Mitte
+    hard: () => middleTask(rng, MAX_100),
+  }),
+);
+
+export const k2Compare = generator('k2-compare', ({ difficulty, rng }) => compareTask(rng, difficulty, { min: 10, max: MAX_100, step: 1 }));
+
+export const k2Complete = generator('k2-complete', ({ difficulty, rng }) => {
+  const [n, target] = byDifficulty<[number, number]>(difficulty, {
+    // bis zum nächsten Zehner: 37 + □ = 40
+    easy: () => {
+      const n = sample(rng, (r) => r.int(11, 98), (n) => n % 10 !== 0);
+      return [n, Math.ceil(n / 10) * 10];
+    },
+    // Fünferzahl bis 100: 35 + □ = 100
+    medium: () => [5 * rng.pick([3, 5, 7, 9, 11, 13, 15, 17, 19]), MAX_100],
+    // beliebig bis 100 oder bis zu einem späteren Zehner: 37 + □ = 60
+    hard: () => {
+      const n = sample(rng, (r) => r.int(11, 88), (n) => n % 5 !== 0);
+      const firstTen = Math.ceil(n / 10) + 1;
+      return [n, firstTen > 9 || rng.chance(0.5) ? MAX_100 : rng.int(firstTen, 9) * 10];
+    },
+  });
+  return completeTask(n, target, MAX_100);
+});
+
+// ---- Kalender -----------------------------------------------------------------------------------
+
+export const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] as const;
+export const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'] as const;
+/** Februar fehlt bewusst – 28 oder 29 Tage wäre keine eindeutige Frage */
+const DAYS_IN_MONTH: Readonly<Record<string, number>> = {
+  Januar: 31, März: 31, April: 30, Mai: 31, Juni: 30, Juli: 31, August: 31, September: 30, Oktober: 31, November: 30, Dezember: 31,
+};
+
+const wrap = (i: number, n: number) => ((i % n) + n) % n;
+const nameAnswer = (name: string) => textAnswer(plain(name), name);
+
+/** Antwort ist ein Wochentag/Monat; Ablenker: einen zu viel/wenig gezählt (heute mitgezählt), falsche Richtung. */
+function cyclicTask(list: readonly string[], from: number, steps: number, question: string, explanation: string[]): GeneratedTask {
+  const answer = list[wrap(from + steps, list.length)];
+  return {
+    prompt: { math: plain(question) },
+    answer: nameAnswer(answer),
+    distractors: [steps + 1, steps - 1, -steps, steps + 2].map((k) => list[wrap(from + k, list.length)]).filter((n) => n !== answer).map(nameAnswer),
+    explanation: explanation.map(plain),
+  };
+}
+
+/** „Montag → Dienstag → Mittwoch“ – bei mehr als einer Woche erst ganze Wochen überspringen */
+function countAlong(list: readonly string[], from: number, steps: number, unit: string): string[] {
+  const lines: string[] = [];
+  const dir = Math.sign(steps);
+  let at = from;
+  let left = Math.abs(steps);
+  if (left >= list.length) {
+    const rounds = Math.floor(left / list.length);
+    lines.push(`${rounds * list.length} ${unit} ${dir > 0 ? 'später' : 'früher'} ist wieder ${list[from]}.`);
+    left -= rounds * list.length;
+  }
+  if (left) {
+    const chain = Array.from({ length: left + 1 }, (_, i) => list[wrap(at + dir * i, list.length)]);
+    lines.push(chain.join(' → '));
+    at += dir * left;
+  }
+  return lines;
+}
+
+export const k2Calendar = generator('k2-calendar', ({ difficulty, rng }) =>
+  byDifficulty(difficulty, {
+    // Welcher Tag/Monat kommt nach/vor …?
+    easy: () => {
+      const months = rng.chance(0.4);
+      const list = months ? MONTHS : WEEKDAYS;
+      const from = rng.int(0, list.length - 1);
+      const after = rng.chance(0.6);
+      return cyclicTask(
+        list,
+        from,
+        after ? 1 : -1,
+        `Welcher ${months ? 'Monat' : 'Tag'} kommt ${after ? 'nach' : 'vor'} ${list[from]}?`,
+        countAlong(list, from, after ? 1 : -1, months ? 'Monate' : 'Tage'),
+      );
+    },
+    // Heute ist Montag. Welcher Tag ist in 3 Tagen?
+    medium: () => {
+      const from = rng.int(0, 6);
+      const steps = rng.int(2, 6) * (rng.chance(0.7) ? 1 : -1);
+      return cyclicTask(
+        WEEKDAYS,
+        from,
+        steps,
+        steps > 0 ? `Heute ist ${WEEKDAYS[from]}. Welcher Tag ist in ${steps} Tagen?` : `Heute ist ${WEEKDAYS[from]}. Welcher Tag war vor ${-steps} Tagen?`,
+        countAlong(WEEKDAYS, from, steps, 'Tage'),
+      );
+    },
+    // über eine Woche hinaus, Monate weiterzählen, Tage eines Monats
+    hard: () => {
+      const kind = rng.pick(['days', 'months', 'length'] as const);
+      if (kind === 'days') {
+        const from = rng.int(0, 6);
+        const steps = rng.int(8, 20);
+        return cyclicTask(WEEKDAYS, from, steps, `Heute ist ${WEEKDAYS[from]}. Welcher Tag ist in ${steps} Tagen?`, countAlong(WEEKDAYS, from, steps, 'Tage'));
+      }
+      if (kind === 'months') {
+        const from = rng.int(0, 11);
+        const steps = rng.int(2, 6);
+        return cyclicTask(MONTHS, from, steps, `Welcher Monat ist ${steps} Monate nach ${MONTHS[from]}?`, countAlong(MONTHS, from, steps, 'Monate'));
+      }
+      const month = rng.pick(Object.keys(DAYS_IN_MONTH));
+      const days = DAYS_IN_MONTH[month];
+      return {
+        prompt: { math: plain(`Wie viele Tage hat der ${month}?`) },
+        answer: numberAnswer(days),
+        distractors: [days === 31 ? 30 : 31, 28, 29, 7].map((d) => numberAnswer(d)),
+        explanation: [
+          plain('31 Tage haben: Januar, März, Mai, Juli, August, Oktober, Dezember (Knöchel-Regel).'),
+          plain(`Der ${month} hat ${days} Tage.`),
+        ],
+      };
+    },
+  }),
+);
+
+export const k2WordProblems = generator('k2-word-problems', ({ difficulty, rng }) =>
+  wordProblemTask(
+    rng,
+    byDifficulty(difficulty, {
+      easy: () => [getMore(50, false), getOff(50)],
+      medium: () => [getMore(MAX_100, true), getOff(MAX_100), howManyMore(MAX_100), packs(10), groups(10)],
+      hard: () => [getAndGive(MAX_100), howManyMore(MAX_100), packs(10), groups(10)],
+    }),
+    MAX_100,
+  ),
+);
+
+export const GRADE_2_GENERATORS: readonly TaskGenerator[] = [
+  k2PlaceValue,
+  k2Neighbors,
+  k2Compare,
+  k2Add100,
+  k2Sub100,
+  k2Complete,
+  k2TimesTable,
+  k2Div,
+  k2Money,
+  k2Length,
+  k2Calendar,
+  k2WordProblems,
+];

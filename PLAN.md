@@ -250,7 +250,18 @@ Recherche ANTON: Fach + Klasse → Bereich (z. B. „Größen“) → Lektion �
 - [x] `/klasse/:grade/lektion/:topicId`: Level 1–3 (= Einfach/Mittel/Schwer, je 8 Aufgaben) und Test (10 Aufgaben, gemischt, ohne Lösungsweg im Feedback); bestes Ergebnis je Schritt in `ProgressData.lessons`
 - [x] Ergebnis-Seite: „Level 1 geschafft“, „Weiter zu Level 2“ / „Zum Test“, „Zur Lektion“; Fortschritts-Seite gruppiert nach Bereichen
 
-## Phase 18 – Inhalte Grundschule ausbauen (offen)
-Ziel: je Klasse 1–4 etwa 15–25 Lektionen statt 5–7, angelehnt an die ANTON-Gliederung (z. B. Kl. 3: Zahlenraum bis 1 000, Addition/Subtraktion, Schriftlich, Mal/Geteilt, Halbschriftlich, Geometrie, Größen, Daten).
-- [ ] Kl. 3 zuerst: Stellentafel/H-Z-E, Zahlenstrahl, Nachbarzahlen, Runden, Ordnen und Vergleichen, Halbschriftlich mal/geteilt, Längen, Gewichte, Geld, Zeitpunkt/Zeitdauer, Achsensymmetrie, Daten ablesen
-- [ ] danach Kl. 1, 2, 4 nach demselben Muster; Aufteilung zu breiter Themen (z. B. „Größen umrechnen“ → Längen / Gewichte / Zeit)
+## Phase 18 – Inhalte Grundschule ausbauen
+Ziel: mehr Lektionen je Klasse, angelehnt an die ANTON-Gliederung. Stand: Kl. 1 → 9, Kl. 2 → 15, Kl. 3 → 23, Kl. 4 → 16 Lektionen.
+- [x] Gemeinsame Bausteine `primary/number-sense.ts` (Stellentafel mit Bündeln und Lücken-Stellen, Vorgänger/Nachfolger, Nachbarzehner/-hunderter, Mitte/dazwischen, Vergleichen, Ergänzen mit Rechenweg) – je Klasse im eigenen Zahlenraum
+- [x] Neue Bilder: Zahlenstrahl (`numberline`, Pfeil nie auf einer beschrifteten Zahl, Lösungsweg zählt vom näheren Nachbarn) und Säulendiagramm (`bars`, Umfragen; Gruppe wächst mit dem Zahlenraum, damit Summen realistisch bleiben)
+- [x] Kl. 3: Bereiche „Zahlen bis 1 000“ (Stellentafel, Zahlenstrahl, Nachbarzahlen, Vergleichen, Runden) und „Daten“; Ergänzen, Halbschriftlich teilen, Längen, Gewichte, Zeitdauer
+- [x] Kl. 1: Zahlenstrahl bis 20, Vorgänger/Nachfolger · Kl. 2: „Zahlen bis 100“ (Zehner und Einer, Zahlenstrahl, Nachbarzahlen, Vergleichen), Ergänzen bis 100, Daten · Kl. 4: „Zahlen bis 1 Million“ (Stellentafel, Zahlenstrahl, Vergleichen), Daten
+- [x] Massentests rechnen jede neue Aufgabenform unabhängig aus dem angezeigten Text bzw. den Bilddaten nach (1 000 bzw. 500 Aufgaben je Stufe); Lehrer-Durchsicht von Stichproben: „0“ als Rundungs- bzw. Unterschieds-Antwort entfernt, „1 Strich“ statt „1 Striche“
+- [x] Achsensymmetrie (Kl. 3 senkrechte, Kl. 4 auch waagerechte Spiegelachse): „Wie viele Kästchen musst du noch färben?“ – Massentest prüft, dass die Spiegelseite eine Teilmenge des Spiegelbilds ist
+- [x] Uhrzeiten (`primary/time.ts`): Zeitpunkte Kl. 3 („8:40 Uhr + 35 min“, auch rückwärts über die volle Stunde), Zeitspannen Kl. 4 bis minutengenau; Lösungsweg in Etappen (bis zur vollen Stunde, ganze Stunden, Rest)
+- [x] Kalender Kl. 2: Wochentage und Monate vor/nach, „in 10 Tagen“ (ganze Wochen überspringen), Tage im Monat (ohne Februar)
+- [x] Sachaufgaben Kl. 2–4 (`primary/word-problems.ts`): je Klasse eigener Bereich, ein- und zweischrittig; Ablenker = falsche Rechenart bzw. vergessener Schritt; der Massentest leitet die Rechnung unabhängig aus Signalwörtern ab
+- [x] Körper erkennen Kl. 3 (neues Bild `solid`: Würfel, Quader, Pyramide, Prisma, Zylinder, Kegel, Kugel im Schrägbild, verdeckte Kanten gestrichelt): benennen, Ecken/Kanten/Flächen zählen – Ecken und Kanten nur bei eckigen Körpern, weil sie bei runden nicht eindeutig sind; der Massentest prüft die Tabelle zusätzlich mit dem Eulerschen Polyedersatz
+- [x] Wahrscheinlichkeit Kl. 3/4 (neues Bild `urn`, Kugeln im Beutel): sicher/möglich/unmöglich, wahrscheinlichste/seltenste Farbe, „wie viele dazulegen?“, zwei Beutel vergleichen (gleich viele Kugeln, gleich viele rote, gleiches Verhältnis)
+- [x] Rechnen mit Geld Kl. 3 in Kommaschreibweise (Cent-Übertrag, Rückgeld von 10/20/50 €, drei Beträge); Maßstab Kl. 4 (1 : 100 bis 1 : 100 000, auch rückwärts); Rechteck/Quadrat Kl. 4 mit Umkehraufgaben – „24 cm“ statt „24 cm²“ zählt als falsch
+- [ ] Offen: Körpernetze (brauchen Bild-Antworten), Kl. 1 Geld und Geometrie, schriftliche Verfahren Kl. 3 (Erweiterungs-/Entbündelungsverfahren)

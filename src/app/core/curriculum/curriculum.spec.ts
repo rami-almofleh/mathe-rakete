@@ -49,7 +49,7 @@ describe('Bereiche (Lektionsliste)', () => {
         expect(listed.sort(), `${state}/${grade}`).toEqual(topicsForGrade(grade, state).map((t) => t.id).sort());
       }
     }
-    expect(chaptersForGrade(3).map((g) => g.chapter.title)).toEqual(['Plus und Minus bis 1 000', 'Mal und geteilt', 'Größen', 'Geometrie']);
+    expect(chaptersForGrade(3).map((g) => g.chapter.title)).toEqual(['Zahlen bis 1 000', 'Plus und Minus bis 1 000', 'Mal und geteilt', 'Größen', 'Geometrie', 'Daten', 'Sachaufgaben']);
   });
 
   it('moves a topic of another grade into a fitting chapter (Bundesland)', () => {
